@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "workspace": {
+    "name": "itastack",
+    "createdAt": 1781399862063,
+    "preset": "starter"
+  },
+  "authorizedRoots": [
+    "/Users/james/Documents/itastack"
+  ],
+  "reload": null
+}

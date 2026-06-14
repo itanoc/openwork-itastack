@@ -1,18 +1,40 @@
 # Secrets and local environment
 .env
 .env.*
+opencode.jsonc
 
 # macOS
 .DS_Store
+.opencode/.DS_Store
+.opencode/skills/.DS_Store
+
+# OpenWork local dependencies/config
+.opencode/node_modules/
+.opencode/package.json
+.opencode/package-lock.json
+.opencode/bun.lock
 
 # Personal OpenWork memory
 memory/index.md
 memory/log.md
 memory/candidates/**
+!memory/candidates/
+!memory/candidates/.gitkeep
 memory/preferences/**
+!memory/preferences/
+!memory/preferences/.gitkeep
 memory/docs/**
+!memory/docs/
+!memory/docs/.gitkeep
 memory/voice/**
+!memory/voice/
+!memory/voice/.gitkeep
 memory/email/**
+!memory/email/
+!memory/email/.gitkeep
 memory/workflows/**
+!memory/workflows/
+!memory/workflows/.gitkeep
 memory/raw/**
-!memory/**/.gitkeep
+!memory/raw/
+!memory/raw/.gitkeep
