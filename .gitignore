@@ -1,0 +1,18 @@
+# Secrets and local environment
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# Personal OpenWork memory
+memory/index.md
+memory/log.md
+memory/candidates/**
+memory/preferences/**
+memory/docs/**
+memory/voice/**
+memory/email/**
+memory/workflows/**
+memory/raw/**
+!memory/**/.gitkeep
