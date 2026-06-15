@@ -36,8 +36,8 @@ Ask for these first:
 
 - `ticket_id`: HaloPSA ticket/project ID.
 - Scope workbook location:
-  - Preferred: local path to technician's copied `.xlsx` workbook, or
-  - SharePoint site URL + folder path + filename if user wants file discovery first.
+  - Preferred: SharePoint site URL + folder path + filename for the existing technician-copied `.xlsx` workbook.
+  - Local path to the technician's copied `.xlsx` workbook is acceptable as a fallback.
 - Optional `project_type`: `auto`, `server-migration`, `network-refresh`, `m365-migration`, `3cx-deployment`, or `mixed`.
 - Optional ITGlue organization ID when client name search is ambiguous.
 
@@ -56,9 +56,18 @@ Use these OpenWork tools instead of Agent Zero `/a0` paths:
   - `itastack_itglue_list_locations`
   - `itastack_itglue_list_contacts`
   - `itastack_itglue_search_documents`
-- Microsoft 365 / SharePoint read-only discovery:
+- Microsoft 365 / SharePoint read-only discovery/download:
   - `itastack_m365_list_sharepoint_folder`
+    - Use for folder discovery and file metadata.
+    - `folder_path` should be relative to the document library root and usually omit `Shared Documents`.
+    - Returned file objects may include `id`, `e_tag`, `web_url`, and temporary `download_url`.
   - `itastack_m365_search_sharepoint`
+    - Optional only; it may require additional Graph permissions and can return 403 even when folder listing works.
+- Microsoft 365 / SharePoint write-back:
+  - `itastack_m365_replace_sharepoint_file`
+    - Use only to replace an existing `.xlsx` workbook after explicit final approval.
+    - Requires latest file `id`, latest `e_tag`, target path, modified workbook bytes, expected SHA256, and `confirm: true`.
+    - Normal scope-planner write-back uses replace, not upload-new, because the workbook should already exist in SharePoint.
 - Web research:
   - Prefer `webfetch` for known vendor URLs.
   - Use OpenWork visible browser only after explicit user approval; start with `openwork_browser_open_url`.
@@ -70,12 +79,18 @@ Use these OpenWork tools instead of Agent Zero `/a0` paths:
 ## Hard Guardrails
 
 - Never modify the master Sales Scope Template.
+- Assume the technician has already copied the Sales Scope Template workbook into the project SharePoint folder before this skill runs.
+- Do not create a new workbook during normal scope-planner execution; replace the existing copied workbook only.
 - Only modify the technician's copied workbook after explicit draft approval.
 - Verify workbook file exists before writing.
-- Treat HaloPSA, ITGlue, M365, 3CX, VSA, and SharePoint ITAStack tools as read-only unless tool name explicitly writes and user asked for that exact write.
+- Treat HaloPSA, ITGlue, M365, 3CX, VSA, and SharePoint ITAStack tools as read-only unless tool name explicitly writes and the user approved that exact write.
 - Do not commit secrets, tokens, private logs, SharePoint cookies, Graph tokens, or downloaded client files.
+- Treat SharePoint `download_url` values as private temporary auth URLs: do not paste them in final answers, commit them, save them in artifacts, or include them in logs beyond transient tool use.
 - Do not paste client-identifying details, internal hostnames, ticket text, or logs into public web search.
-- If SharePoint download/upload is needed and no safe OpenWork tool is available, stop and ask user to provide local workbook copy or approve visible-browser/manual SharePoint handling.
+- If SharePoint download is available through a returned `download_url`, it may be used transiently to create a local working copy under `/var/folders/mf/82h39t8j28d7ytj59y8_gl8h0000gn/T/opencode` or another user-approved non-repo temp path.
+- Before SharePoint replace, re-list the folder and verify the current `id` and `e_tag`; if the eTag changed since download, stop and ask the user to review because someone else may have edited the workbook.
+- If SharePoint replace is needed and no safe OpenWork tool is available, stop and ask user to upload the modified local copy manually or approve visible-browser/manual SharePoint handling.
+- Do not retry a failed replace blindly. Always re-list folder metadata first to determine whether the upload actually happened.
 - If source ticket, client, ITGlue org, workbook path, or project type is ambiguous, ask one targeted clarification question and stop.
 
 ## Workflow
@@ -83,22 +98,28 @@ Use these OpenWork tools instead of Agent Zero `/a0` paths:
 ### Phase 1 — Gather Context and Verify Workbook
 
 1. Collect ticket ID and workbook location.
-2. If SharePoint discovery is requested, list/search folder with:
-   - `itastack_m365_list_sharepoint_folder` with tenant and site URL provided by user or known context.
-   - `itastack_m365_search_sharepoint` when only filename/query is known.
-3. If local workbook path is provided, verify it exists before write-back.
-4. Fetch Halo ticket with `itastack_halo_get_ticket`:
+2. If SharePoint discovery is requested, list the folder with:
+   - `itastack_m365_list_sharepoint_folder` with tenant, site URL, and folder path provided by user or known context.
+   - Use a folder path relative to the document library root, for example `1. Client Notes/...`, not `Shared Documents/1. Client Notes/...`.
+   - Prefer folder listing over search when the folder is known.
+   - Use `itastack_m365_search_sharepoint` only as a fallback when filename/query is known but folder is not; search may be denied even when listing works.
+3. If SharePoint listing returns the file:
+   - Confirm name, `id`, `e_tag`, size, modified timestamp, modified by, and web URL.
+   - If a `download_url` is present and a local workbook is needed, use it only transiently to download a working copy outside the repo.
+   - Never expose or store the `download_url`.
+4. If local workbook path is provided, verify it exists before write-back.
+5. Fetch Halo ticket with `itastack_halo_get_ticket`:
    - `include_actions`: `true`
    - `slim`: `false`
    - `max_note_chars`: `8000`
    - `max_actions`: `0`
-5. Extract:
+6. Extract:
    - client name and client ID
    - project summary and details/typeform fields
    - parent/child ticket clues
    - assigned technician / prepared by
    - client POC, constraints, notes, and actions
-6. Present concise ticket summary and ask technician to confirm or correct scope.
+7. Present concise ticket summary and ask technician to confirm or correct scope.
 
 Stop if ticket is restricted, missing, ambiguous, or client conflicts with user-provided context.
 
@@ -218,13 +239,22 @@ Present full draft to technician. Iterate until technician explicitly approves.
 
 Do not write workbook yet.
 
-### Phase 6 — Build JSON, Write Local Workbook, Verify
+### Phase 6 — Build JSON, Download Existing Workbook, Write, Replace, Verify
 
 After explicit approval:
 
 1. Build plan JSON following `references/plan-json-format.md`.
 2. Save JSON under `artifacts/scope-plans/scope_plan_<ticket_id>.json` when useful.
-3. Write to local workbook with:
+3. Prepare a local workbook copy from the existing workbook:
+   - Standard path: use `itastack_m365_list_sharepoint_folder` to find the existing copied workbook in the project folder.
+   - Capture source `id`, `e_tag`, name, size, modified timestamp, modified by, and web URL.
+   - If user provided a local workbook path, use that path.
+   - If SharePoint listing returned a `download_url`, download it to a non-repo temp path such as `/var/folders/mf/82h39t8j28d7ytj59y8_gl8h0000gn/T/opencode/scope-planner/<safe-filename>.xlsx`.
+   - Do not save SharePoint temporary URLs in repo files, plan JSON, notes, or final response.
+   - Do not put client workbook copies under the repo unless user explicitly asks.
+4. Write to local workbook with the current OS:
+
+macOS/Linux shell:
 
 ```bash
 python3 .opencode/skills/scope-planner/scripts/write_scope.py \
@@ -232,23 +262,53 @@ python3 .opencode/skills/scope-planner/scripts/write_scope.py \
   --file "<local scope workbook copy>.xlsx"
 ```
 
-4. Verify script output:
+Windows PowerShell:
+
+```powershell
+py .opencode\skills\scope-planner\scripts\write_scope.py `
+  --input artifacts\scope-plans\scope_plan_<ticket_id>.json `
+  --file "<local scope workbook copy>.xlsx"
+```
+
+5. Verify script output:
    - success message
    - day count
    - task count
    - daily hour totals
    - any over-8-hour warnings
-5. If SharePoint upload is required, ask user for approved method:
-   - user uploads local workbook manually, or
-   - user approves visible-browser SharePoint upload, or
-   - user provides approved extension/tool path if available.
+6. Before replacing SharePoint file:
+   - Re-list the same SharePoint folder.
+   - Confirm the target workbook still has the same `id` and `e_tag` captured before download/write.
+   - If `id` differs, stop: target path may now point to a different file.
+   - If `e_tag` differs, stop: someone or something changed the workbook after download.
+7. Replace the existing workbook using `itastack_m365_replace_sharepoint_file`:
+   - `tenant`: target tenant code.
+   - `site_url`: SharePoint site URL.
+   - `target_path`: library-relative path to the existing workbook, omitting `Shared Documents`.
+   - `original_file_id`: captured file `id`.
+   - `original_etag`: latest verified `e_tag`.
+   - `file_base64`: base64 of the modified workbook bytes.
+   - `expected_sha256`: SHA256 of the modified workbook bytes.
+   - `confirm`: `true` only after explicit user approval of the final draft and exact target workbook.
+8. After replace, re-list the folder and verify:
+   - file `id` stayed the same
+   - `e_tag` advanced
+   - modified timestamp advanced
+   - size is reasonable for the modified workbook
+   - modified by is expected
+9. If `itastack_m365_replace_sharepoint_file` returns an eTag mismatch or verification error:
+   - Do not retry automatically.
+   - Re-list the folder immediately.
+   - If same file `id` now has an advanced `e_tag`, updated modified timestamp, and reasonable size, report that replace appears successful but tool verification returned an error.
+   - If metadata did not change, report replace failed and keep the modified local workbook path for manual upload or retry after user approval.
 
 Report back with:
 
 - local workbook path
 - backup workbook path from script output
 - plan JSON path if created
-- SharePoint upload status if performed by user-approved method
+- SharePoint source metadata if discovered by folder listing
+- SharePoint replace status and post-replace metadata
 - any warnings needing human review
 
 ## Plan JSON Shape
