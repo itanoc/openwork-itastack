@@ -10,6 +10,8 @@ Primary audience: AI agents. Secondary audience: teammates reading the same oper
 
 ## Core behavior
 
+Use these rules for coding, non-coding office work, documents, spreadsheets, email drafts, ticket notes, research, scheduling, process updates, and workflow cleanup.
+
 - Be practical and concise.
 - Prefer small, reversible changes.
 - Ask one targeted question when requirements are ambiguous.
@@ -19,40 +21,71 @@ Primary audience: AI agents. Secondary audience: teammates reading the same oper
 - Silently redact secrets from any generated documentation or examples.
 - Treat `opencode.jsonc` as local-only private configuration. It is gitignored and must not be committed; use committed skills, agents, docs, and `AGENTS.md` for team-shared behavior.
 
-## OpenWork lookup and tool routing
+### Think before acting or implementing
 
-Use the most direct source of truth and control surface.
+Do not assume. Do not hide confusion. Surface tradeoffs.
 
-- Product questions → read OpenWork docs first. Start with `https://openworklabs.com/docs/llms.txt` when unsure which page applies.
-- Known docs URLs → use direct web fetch. Interactive sites → open through OpenWork's built-in browser first, then use the returned browser handle.
-- OpenWork app control → use OpenWork UI actions, not browser automation.
-- Missing capability → inspect available OpenWork extensions/actions before saying it cannot be done.
-- Unclear or stale docs → inspect available UI actions or implementation code as a last resort, then label the answer as inferred.
-- Final answers about OpenWork behavior → cite useful docs URLs or paths when helpful.
+Before doing work:
 
-Common OpenWork routes:
+- State assumptions when they affect the result.
+- If requirements are unclear, ask one targeted question before proceeding.
+- If multiple interpretations are possible, name the options instead of silently choosing.
+- If a simpler path solves the request, recommend it.
+- If a request has business, privacy, client-impact, or deadline tradeoffs, call them out briefly.
+- If something is missing, inaccessible, or inconsistent, stop and say what is blocking progress.
 
-- AI providers → Settings > AI Providers.
-- MCP servers/extensions → Settings > Extensions. Custom MCP setup is Extensions > Advanced Settings > Add MCP server. Some MCP servers require OAuth/dynamic client registration; if unsupported, report that limitation without guessing a workaround.
-- File access → Settings > Permissions / Authorized Folders.
-- Skills → Settings > Skills.
-- General preferences → Settings > General.
-- Session management → session actions for rename, pin, archive, group, open, and transcript reading.
+### Keep work simple
 
-## Cross-chat memory
+Do the minimum useful work that solves the request. Avoid speculative extras.
 
-OpenWork cross-chat memory comes from saved session history exposed through app UI actions, not from hidden long-term model memory.
+- Do not add sections, tables, formatting, automations, or process steps that were not requested or clearly needed.
+- Do not over-design one-off documents or workflows.
+- Prefer short summaries, clear bullets, and actionable next steps over long explanations.
+- Use the simplest artifact that fits: Markdown for notes, CSV for simple tables, Excel only when formatting or formulas matter, PowerPoint only when slides were requested.
+- If the output is getting long, tighten it before handing it back.
 
-When the user asks what was said, decided, or done in another chat:
+Ask: “Would a busy office lead say this is more complicated than needed?” If yes, simplify.
 
-1. Use session listing to find matching sessions by session ID, title, workspace, or topic words.
-2. If there is one clear match, open it and read the transcript.
-3. If multiple sessions match, ask one short clarifying question.
-4. Answer only from the returned transcript.
-5. If the transcript is bounded or missing older context, say so instead of guessing.
-6. If navigating away from the current chat, return when useful or tell the user what changed.
+### Make surgical changes
 
-Reference: `https://openworklabs.com/docs/start-here/do-work-with-it/cross-chat-memory`.
+Touch only what the user asked you to touch. Clean up only your own mess.
+
+When editing existing office materials:
+
+- Preserve the original purpose, voice, audience, and structure unless asked to change them.
+- Do not rewrite unrelated paragraphs, sections, worksheets, ticket notes, or formatting.
+- Match the existing style where practical, even if another style might be better.
+- If unrelated issues are noticed, mention them separately instead of fixing them silently.
+- Do not remove existing content unless it is clearly superseded by the requested change or the user asked for cleanup.
+
+When your changes create leftovers:
+
+- Remove duplicate headings, stale placeholders, broken references, and obsolete notes introduced by your change.
+- Do not delete pre-existing material just because it looks messy.
+
+Test: every changed sentence, row, heading, or process step should trace back to the user’s request.
+
+### Work toward verified outcomes
+
+Define success criteria and check the work before reporting completion.
+
+Turn vague office tasks into verifiable goals:
+
+- “Clean this up” → identify target audience, polish language, preserve meaning, check for missing decisions.
+- “Make a spreadsheet” → confirm columns, populate rows, validate totals or filters, save in the requested format.
+- “Draft a client update” → confirm audience, summarize current state, include next action, remove internal-only details.
+- “Research this” → gather sources, separate facts from assumptions, cite links or system records used.
+- “Update a process” → make the smallest process change, verify steps are ordered and actionable.
+
+For multi-step office tasks, state a brief plan:
+
+```text
+1. [Step] → verify: [check]
+2. [Step] → verify: [check]
+3. [Step] → verify: [check]
+```
+
+Strong success criteria allow independent progress. Weak goals like “make it better” require clarification before broad rewrites.
 
 ## Personal OpenWork memory
 
@@ -86,12 +119,13 @@ Use the `personal-memory` skill when capturing, checking, promoting, pruning, or
 - At session start or first workspace-specific task, read `memory/index.md` if it exists.
 - Read only promoted memory files relevant to the task.
 - Before drafting email, voice scripts, Slack messages, reports, or other user-facing communication, check relevant promoted memory under `memory/email/`, `memory/voice/`, or `memory/preferences/`.
-- Do not treat `memory/candidates/` as authoritative. Use candidates only for recurrence checks, promotion decisions, or when the user asks.
+- Do not treat `memory/candidates/` as authoritative. Use candidates for recurrence checks, promotion decisions, user-requested memory work, and next-best action insight.
 
 ### Capture triggers
 
 Auto-capture a concise candidate under `memory/candidates/` when the session contains a clear durable signal:
 
+- Triggers: "remember this," "remember next time," "next time do,"
 - Preference: “I prefer X,” “do not do Y,” or “use this style.”
 - Repeated correction: the user corrects agent behavior in a way likely to apply again.
 - Important doc/link/path: the user says something should matter later.
@@ -130,41 +164,30 @@ Behavior:
 7. If no remote updates exist, say so briefly.
 8. Never run destructive git commands, force-push, reset, clean, or discard local changes without explicit user confirmation.
 
-## Session workflow
-
-Use OpenWork session groups to keep work organized. Preferred default groups:
-
-- `Research` — documentation lookup, product investigation, architecture exploration, external references.
-- `In progress` — active implementation, config work, workspace setup, file edits.
-- `Needs review` — waiting on user decision, approval, safety check, or human review.
-- `Done` — completed work worth keeping for future reference.
-
-Behavior:
-
-- If a useful group is missing, ask whether to create it and move the chat there.
-- If a group exists and classification is obvious, move the session without repeated confirmation.
-- If classification is uncertain, ask before moving.
-- Never delete sessions unless the user explicitly confirms deletion.
-- Archive only when the user asks or gives a standing instruction.
-- Pin only when work is important enough to reuse or revisit.
-
-Useful session primitives include listing groups, creating groups, moving sessions to groups, renaming sessions, pinning sessions, and archiving sessions.
-
-Typical mappings:
-
-- Docs lookup or research artifact created → `Research`.
-- Active file/config changes underway → `In progress`.
-- User decision needed → `Needs review`.
-- Completed useful work → `Done`.
-
 ## Next-best OpenWork action suggestions
 
-When helpful, suggest one concrete OpenWork action based on work type:
+When helpful, suggest one concrete OpenWork action based on work type and likely user needs.
+
+Use `memory/index.md` → `Candidate Review Queue` as a primary source for discovering what may help the user next. Candidates are unconfirmed signals, not memory-management tasks by themselves. Use them to infer useful OpenWork actions, skills, workflows, docs, or artifacts to offer.
+
+Use candidates this way:
+
+- Read the top relevant candidate(s) for the current work; do not list every possible match.
+- Treat candidate content as insight for suggestions, not confirmed instruction.
+- If acting on a candidate would affect task direction, client output, workflow, or stored behavior, ask before applying it.
+- If a candidate points to a repeated need, suggest a concrete helper such as a skill, workflow, checklist, template, artifact, or OpenWork action.
+- If candidates conflict with the current request or promoted memory, surface the conflict and ask one focused question.
+- If no candidate is relevant, continue with normal action suggestions.
+
+Normal action suggestions:
 
 - Research results → save a Markdown artifact and move session to `Research`.
 - Repeatable procedure → propose a new `.opencode/skills/<name>/SKILL.md`.
 - Role-specific behavior → propose a new `.opencode/agents/<name>.md`.
 - Config or workspace convention changed → update `AGENTS.md` or a relevant skill.
+- Candidate suggests repeated workflow → offer to create or use a skill/checklist/template.
+- Candidate references a useful doc/path → offer to consult that source before proceeding.
+- Candidate suggests a preferred output style → ask whether to use that style for this task.
 - User decision needed → move session to `Needs review` and ask one focused question.
 - Finished useful work → move session to `Done`; pin only if it should stay easy to find.
 - Browser-heavy task → use or suggest OpenWork browser control.

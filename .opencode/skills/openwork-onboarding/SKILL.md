@@ -1,7 +1,7 @@
 ---
 name: openwork-onboarding
 description: |
-  Guide first-time teammates through OpenWork Desktop onboarding, including safe self-checks for file editing, browser automation, Claude Code presence, and dynamic MCP/report examples.
+  Guide first-time teammates through OpenWork Desktop onboarding, including teammate profile capture, HaloPSA agent lookup, AGENTS.md profile setup, safe file/browser checks, Claude Code presence, and dynamic MCP/report examples.
 
   Triggers when user mentions:
   - "OpenWork onboarding"
@@ -13,14 +13,19 @@ description: |
 
 Use this skill when a teammate needs a guided first-run walkthrough of OpenWork Desktop.
 
-Goal: prove OpenWork can safely create/edit files, use the built-in browser for browser automations, detect possible Claude Code overlap, and show how MCP/extensions can pull information into a report.
+Goal: capture the teammate's workspace identity, fetch their HaloPSA agent details, add confirmed profile context near the top of `AGENTS.md`, prove OpenWork can safely create/edit files, use the built-in browser for browser automations, detect possible Claude Code overlap, and show how MCP/extensions can pull information into a report.
 
 Audience: non-technical or mixed-technical team members using OpenWork for the first time.
+
+This onboarding starts by capturing the teammate's basic work identity so future agents know who is using the workspace. It asks for first and last name, uses HaloPSA to fetch onboarding-safe agent details, then adds the confirmed profile near the top of `AGENTS.md` after explicit approval.
 
 ## Safety rules
 
 - Do not read secrets, tokens, `.env` files, credential stores, shell history, browser cookies, or private logs.
 - Do not modify global config unless the user explicitly approves the exact change.
+- Treat teammate profile data as shared workspace context, not private memory. Before writing name, Halo agent ID, email, initials, teams, timezone, workday, or active status to `AGENTS.md`, tell the user that `AGENTS.md` is repo/shared workspace context and ask for explicit confirmation.
+- Store only onboarding-safe HaloPSA fields in `AGENTS.md`. Do not paste the raw Halo agent payload, department role GUIDs, cost/rate fields, billing flags, phone/SMS fields, or third-party authorization flags.
+- Do not guess HaloPSA agent details. If Halo lookup fails or has multiple matches, ask the user to choose or continue with unknown values.
 - If Claude Code is not installed, continue silently.
 - If Claude Code is installed, ask before changing anything related to Claude Code, Claude Code skills, or shared skill paths.
 - Use harmless demo files under `onboarding/` in the current workspace.
@@ -34,6 +39,7 @@ Create or update:
 - `onboarding/openwork-demo.txt` — simple file creation/editing demo.
 - `onboarding/openwork-onboarding-report.md` — run log and results.
 - Optionally `onboarding/example-report.md` — sample report generated from available read-only MCP/extension data.
+- `AGENTS.md` — update near the top with the confirmed onboarded teammate profile, unless the user declines.
 
 If OpenWork shows a skill reload banner after this skill is installed or updated, reload skills before running onboarding.
 
@@ -42,10 +48,15 @@ If OpenWork shows a skill reload banner after this skill is installed or updated
 - Workspace write access for `onboarding/`.
 - Built-in browser access for `https://example.com`.
 - Shell access for OS and Claude Code detection.
+- Read-only HaloPSA agent lookup access, or user-provided fallback values if Halo is unavailable.
 - Optional: OpenWork UI actions for editor/navigation demos.
 - Optional: extension/MCP action access for dynamic final demo.
 
 ## Onboarding workflow
+
+### Start here: capture teammate profile first
+
+Before explaining checks, detecting OS, creating files, opening browser, or discovering MCP/extensions, capture the teammate profile and handle the HaloPSA lookup in step 1 below. Do not run other onboarding checks until this profile step is complete, skipped because Halo is unavailable, or explicitly declined for `AGENTS.md` storage.
 
 ### Result capture schema
 
@@ -68,17 +79,78 @@ Severity rules:
 - `warning`: browser automation fails or editor demo cannot be shown.
 - `info`: Claude Code absent, MCP/extensions absent, or optional demo skipped.
 
-### 1. Explain what OpenWork will check
+### 1. Capture teammate profile and update AGENTS.md
+
+Capture teammate identity before running the technical checks. This is a required onboarding step; only the `AGENTS.md` write is optional if the user declines shared-context storage.
+
+1. Ask for the teammate's first and last name.
+2. Search HaloPSA agents with the full name using the read-only Halo agent list/search tool when available, e.g. `itastack_halo_list_agents` with `search: "<first> <last>"`.
+3. From the selected Halo agent record, extract only onboarding-safe fields:
+
+   - name
+   - firstname
+   - surname
+   - id
+   - email
+   - initials
+   - primary team (`team`)
+   - team names from `teams[]`
+   - timezone
+   - workday name
+   - active status derived from `isdisabled` when available
+
+4. If exactly one likely agent matches, present the name, agent ID, email, initials, primary team, teams, timezone, workday, and active status for confirmation.
+5. If multiple likely agents match, ask the user to choose the correct record. Show only enough fields to disambiguate: name, agent ID, email, primary team, and active status if available.
+6. If no Halo agent matches, ask whether to continue with name only or retry with a different spelling/email.
+7. Before writing to `AGENTS.md`, ask explicit confirmation:
+
+   > I can add this profile near the top of `AGENTS.md`: name, Halo agent ID, email, initials, primary team, teams, timezone, workday, and active status. `AGENTS.md` is shared workspace/repo context, not private memory. Add it?
+
+8. If confirmed, insert or update this exact marked block near the top of the root `AGENTS.md`, after the `# AGENTS.md` title and before `## Purpose` when possible:
+
+   ```markdown
+   <!-- openwork-onboarding:personal-profile:start -->
+   ## Current OpenWork teammate profile
+
+   - Name: <First Last>
+   - First name: <first name>
+   - Last name: <last name or surname without pronoun text when obvious>
+   - Halo surname field: <raw Halo surname field when it includes useful pronoun text, or unknown>
+   - Halo agent ID: <agent_id or unknown>
+   - Email: <email or unknown>
+   - Initials: <initials or unknown>
+   - Primary team: <team or unknown>
+   - Teams: <comma-separated team names or unknown>
+   - Timezone: <timezone or unknown>
+   - Workday: <workday_name or unknown>
+   - Active in Halo: <true/false/unknown>
+   - Source: OpenWork onboarding HaloPSA lookup
+
+   <!-- openwork-onboarding:personal-profile:end -->
+   ```
+
+9. If the marked block already exists, replace only the content inside the markers. Do not rewrite unrelated `AGENTS.md` content.
+10. If the user declines, do not write profile data to `AGENTS.md`; record the skip in the onboarding report.
+11. If `AGENTS.md` cannot be written, stop and explain the workspace permissions problem before continuing.
+
+Record profile capture in `onboarding/openwork-onboarding-report.md`:
+
+- first and last name provided
+- Halo lookup result: matched / multiple candidates / not found / unavailable
+- selected Halo agent ID, email, initials, primary team, teams, timezone, workday, and active status, if confirmed
+- `AGENTS.md` update status: updated / declined / failed
+
+### 2. Explain what OpenWork will check
 
 Tell the teammate:
 
-> This onboarding checks that OpenWork can create and edit files in this workspace, use the built-in browser for browser automation, detect whether Claude Code is installed, and show how available MCP/extensions can pull information into a report.
+> This onboarding records your confirmed teammate profile, uses HaloPSA to find your agent ID, email, initials, team memberships, timezone, workday, and active status, checks that OpenWork can create and edit files in this workspace, uses the built-in browser for browser automation, detects whether Claude Code is installed, and shows how available MCP/extensions can pull information into a report.
 
 Explain the built-in browser:
 
 > OpenWork includes a built-in browser panel. Agents can open websites, click buttons, fill forms, read page structure, and take screenshots. This enables browser automation for tasks like testing web apps, collecting public data, or walking through web workflows with your approval.
 
-### 2. Detect OS
+### 3. Detect OS
 
 Use a safe OS check.
 
@@ -89,7 +161,7 @@ Preferred shell commands:
 
 Record detected OS in `onboarding/openwork-onboarding-report.md`.
 
-### 3. Check file create/edit access
+### 4. Check file create/edit access
 
 Create directory and file:
 
@@ -118,7 +190,7 @@ If write fails:
 3. Offer to open Settings > Permissions using OpenWork UI action `settings.panel.open` with `{panel:"permissions"}`.
 4. Ask user to authorize current workspace or parent folder.
 
-### 4. Demonstrate file editor
+### 5. Demonstrate file editor
 
 Open or direct user to `onboarding/openwork-demo.txt`.
 
@@ -135,7 +207,7 @@ Record editor demo status in report:
 - manual open instructions given
 - skipped because UI action unavailable
 
-### 5. Check browser automation
+### 6. Check browser automation
 
 Use the built-in browser tools.
 
@@ -158,7 +230,7 @@ If check fails:
 - Suggest restarting OpenWork, clearing proxy if used, and trying again.
 - Record failure and error in report.
 
-### 6. Detect Claude Code and ask before blocking
+### 7. Detect Claude Code and ask before blocking
 
 Purpose: find whether Claude Code is installed and could introduce overlapping global skills or behavior.
 
@@ -208,7 +280,7 @@ Possible config paths to inspect after approval:
 
 If blocking/isolation is requested, prefer documentation/manual instructions first. Any actual config edit needs a second confirmation naming exact file and change.
 
-### 7. Discover dynamic MCP/extension capabilities
+### 8. Discover dynamic MCP/extension capabilities
 
 Do not assume any specific MCP server exists.
 
@@ -231,7 +303,7 @@ If no MCP/extensions are configured, say:
 
 > No custom MCP or extension actions were discovered in this session. You can add integrations in Settings > Extensions. Once connected, OpenWork can use those tools to pull information and write reports.
 
-### 8. Give dynamic MCP-to-report example
+### 9. Give dynamic MCP-to-report example
 
 If read-only MCP/extension actions are available, offer a safe demo:
 
@@ -291,7 +363,7 @@ Pull a ticket, document, email thread, or system record with a read-only MCP too
 - Source references
 ```
 
-### 9. Write final onboarding report
+### 10. Write final onboarding report
 
 Create or update `onboarding/openwork-onboarding-report.md` with:
 
@@ -302,6 +374,23 @@ Create or update `onboarding/openwork-onboarding-report.md` with:
 
 - OS: <detected>
 - Workspace: <path>
+
+## Teammate Profile
+
+- Name: <First Last>
+- First name: <first name>
+- Last name: <last name>
+- Halo surname field: <raw Halo surname field or unknown>
+- Halo agent ID: <agent_id or unknown>
+- Email: <email or unknown>
+- Initials: <initials or unknown>
+- Primary team: <team or unknown>
+- Teams: <comma-separated team names or unknown>
+- Timezone: <timezone or unknown>
+- Workday: <workday_name or unknown>
+- Active in Halo: <true/false/unknown>
+- Halo lookup: <matched/multiple candidates/not found/unavailable>
+- AGENTS.md update: <updated/declined/failed>
 
 ## Checks
 
@@ -314,6 +403,7 @@ Create or update `onboarding/openwork-onboarding-report.md` with:
 | Claude Code | <detected/not detected> | <version or blank> |
 | Claude Code blocking | <not asked/left unchanged/review requested/changed> | <notes> |
 | MCP/extensions | <found/not found> | <count/list summary> |
+| Personal profile | <updated/declined/fail> | <Halo agent ID/email or reason skipped> |
 
 ## Detailed Results
 
@@ -327,6 +417,7 @@ Create or update `onboarding/openwork-onboarding-report.md` with:
 - OpenWork has a built-in browser for browser automation.
 - OpenWork can use configured MCP/extensions to retrieve information.
 - OpenWork can save results into workspace reports.
+- OpenWork can look up your HaloPSA agent record and, with confirmation, save onboarding-safe teammate context near the top of `AGENTS.md`.
 
 ## Useful next prompts
 
@@ -336,11 +427,12 @@ Create or update `onboarding/openwork-onboarding-report.md` with:
 - "Create a checklist for this process in the workspace."
 ```
 
-### 10. Close onboarding
+### 11. Close onboarding
 
 End with concise next steps:
 
 - Mention exact file paths created.
+- Mention whether `AGENTS.md` was updated with the teammate profile.
 - Mention whether browser automation passed.
 - Mention whether Claude Code was detected only if detected or if report includes it.
 - Mention how to add extensions: Settings > Extensions.
@@ -356,6 +448,10 @@ End with concise next steps:
 ## Verification checklist for agent using this skill
 
 - [ ] Created/edited `onboarding/openwork-demo.txt` or explained permission blocker.
+- [ ] Asked for first and last name.
+- [ ] Looked up HaloPSA agent details when the tool was available.
+- [ ] Asked before writing teammate profile data to `AGENTS.md`.
+- [ ] Updated only the marked `AGENTS.md` profile block, or recorded skip/decline.
 - [ ] Browser check attempted against `https://example.com`.
 - [ ] Claude Code detection handled per OS.
 - [ ] No Claude Code blocking/config edits performed without explicit confirmation.
