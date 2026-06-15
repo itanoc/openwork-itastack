@@ -94,13 +94,7 @@ Turn vague office tasks into verifiable goals:
 - “Research this” → gather sources, separate facts from assumptions, cite links or system records used.
 - “Update a process” → make the smallest process change, verify steps are ordered and actionable.
 
-For multi-step office tasks, state a brief plan:
-
-```text
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
+For multi-step office tasks, state a brief plan using numbered bullets, with each step including its verification check.
 
 Strong success criteria allow independent progress. Weak goals like “make it better” require clarification before broad rewrites.
 
@@ -166,26 +160,25 @@ Before reporting a meaningful task complete, run a memory check:
 
 ## Repository sync checks
 
-After 5 or more assistant turns in any git repository with an upstream, run a quiet background sync check. Repeat about every 5 assistant turns after that during longer sessions.
+After 5 or more assistant turns, run a quiet OpenWork configuration update check. Repeat about every 5 assistant turns during longer sessions and before wrapping up meaningful work.
 
-Goal: help non-technical teammates notice GitHub updates early without needing to understand git or worry about local work being overwritten.
+Use `git fetch --prune --quiet`, then `git status --short --branch`, then `git rev-list --left-right --count HEAD...@{upstream}`.
 
-Simplest check command:
+Stay silent when no action is needed.
 
-```bash
-git fetch --prune --quiet && git status --short --branch
-```
+If updates are available, automatically use the endpoint-safe sync procedure. OpenWork configuration wins, but all Git-visible working-tree drift must be backed up first under `artifacts/git-sync-backups/<timestamp>/`.
 
-Behavior:
+Ignored local-only data must be preserved in place.
 
-1. If the workspace is not a git repository or has no upstream, report that sync check is unavailable and continue.
-2. Run `git fetch --prune --quiet && git status --short --branch` to refresh remote refs and check status.
-3. Check branch relationship to upstream with `git status --short --branch` and `git rev-list --left-right --count HEAD...@{upstream}`.
-4. If local branch is behind upstream and working tree is clean, notify the user in plain language: `GitHub updates are available. Reply yes to update.` Do not pull without explicit user confirmation.
-5. If local branch is behind upstream and working tree has local changes, do not pull. Offer safe choices: inspect incoming commits, commit local work, stash local work, or skip.
-6. If local branch has diverged, do not pull automatically. Explain that manual review or rebase/merge decision is needed.
-7. If no remote updates exist, say so briefly.
-8. Never run destructive git commands, force-push, reset, clean, or discard local changes without explicit user confirmation.
+Report only when updates are applied, sync cannot complete, the check fails, or repository setup is missing. Avoid Git/GitHub wording in user-facing update messages unless troubleshooting requires it.
+
+Do not ask non-technical users to choose Git strategies. Do not commit, push, branch, create PRs, merge, rebase, or stash during endpoint sync handling.
+
+Use the `endpoint-sync` skill or equivalent documented procedure for implementation details.
+
+## Assistant reply formatting
+
+Do not use fenced code blocks in assistant replies. The current OpenWork UI may clip fenced blocks. Use bullets, numbered lists, and inline commands instead. If copy-paste content is needed, provide it as plain text without triple-backtick fencing.
 
 ## Next-best OpenWork action suggestions
 
