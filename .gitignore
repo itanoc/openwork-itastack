@@ -39,5 +39,8 @@ memory/raw/**
 !memory/raw/
 !memory/raw/.gitkeep
 
+# Personal teaching workspaces
+teaching/
+
 # Throwaway prototypes
 prototypes/

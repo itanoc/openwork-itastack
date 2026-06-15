@@ -79,6 +79,19 @@ Severity rules:
 - `warning`: browser automation fails or editor demo cannot be shown.
 - `info`: Claude Code absent, MCP/extensions absent, or optional demo skipped.
 
+### Guided checkpoint rule
+
+After each visible feature demo, stop and check in before continuing. Tell the user what happened, what they should see, and ask whether they have questions or want to continue.
+
+Use this checkpoint format:
+
+> You should now see <feature/result>. This shows <capability>. Any questions before we continue?
+
+Required checkpoints:
+
+- After the browser window opens, before capturing the browser snapshot.
+- After `onboarding/example-report.md` is created and opened or manual-open instructions are given.
+
 ### 1. Capture teammate profile and update AGENTS.md
 
 Capture teammate identity before running the technical checks. This is a required onboarding step; only the `AGENTS.md` write is optional if the user declines shared-context storage.
@@ -212,10 +225,16 @@ Record editor demo status in report:
 Use the built-in browser tools.
 
 1. Open `https://example.com` with `openwork_browser_open_url`.
-2. Use returned `browser_url` and `target_id` for all browser calls.
-3. Capture browser snapshot.
-4. Verify title/text contains `Example Domain`.
-5. Optional: take screenshot only if user wants visual proof.
+2. After the browser window opens, stop and inform the user:
+
+   > You should now see `example.com` in the OpenWork browser panel. This shows OpenWork can open web pages for browser automation. I will inspect the page structure next to confirm automation access. Any questions before I continue?
+
+   Wait for the user to continue before capturing the browser snapshot.
+
+3. Use returned `browser_url` and `target_id` for all browser calls.
+4. Capture browser snapshot.
+5. Verify title/text contains `Example Domain`.
+6. Optional: take screenshot only if user wants visual proof.
 
 Important: do not call `browser_navigate` first. OpenWork browser automation must start with `openwork_browser_open_url`, then use the returned `browser_url` and `target_id`.
 
@@ -363,6 +382,14 @@ Pull a ticket, document, email thread, or system record with a read-only MCP too
 - Source references
 ```
 
+After `onboarding/example-report.md` is created, open it or direct the user to it using the same safe UI-action pattern from the file editor demo. Do not open another onboarding document as the document example.
+
+Stop here and check in with the user:
+
+> You should now see `onboarding/example-report.md`. This shows how OpenWork can pull read-only tool data or a template into a saved workspace report. Any questions before I continue to the final onboarding report?
+
+Wait for the user to continue before writing the final onboarding report.
+
 ### 10. Write final onboarding report
 
 Create or update `onboarding/openwork-onboarding-report.md` with:
@@ -453,7 +480,10 @@ End with concise next steps:
 - [ ] Asked before writing teammate profile data to `AGENTS.md`.
 - [ ] Updated only the marked `AGENTS.md` profile block, or recorded skip/decline.
 - [ ] Browser check attempted against `https://example.com`.
+- [ ] Stopped after browser window opened and checked for questions before snapshot.
 - [ ] Claude Code detection handled per OS.
 - [ ] No Claude Code blocking/config edits performed without explicit confirmation.
 - [ ] MCP/extension example stayed dynamic.
+- [ ] Created and opened or directed user to `onboarding/example-report.md` as the one document example.
+- [ ] Stopped after example report opened and checked for questions.
 - [ ] Wrote `onboarding/openwork-onboarding-report.md`.
