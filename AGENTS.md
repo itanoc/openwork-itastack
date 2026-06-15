@@ -17,6 +17,7 @@ Primary audience: AI agents. Secondary audience: teammates reading the same oper
 - When work produces a reusable procedure, suggest capturing it as a skill or agent.
 - Never store secrets, tokens, API keys, bearer strings, OAuth credentials, private logs, or sensitive screenshots in repo files.
 - Silently redact secrets from any generated documentation or examples.
+- Treat `opencode.jsonc` as local-only private configuration. It is gitignored and must not be committed; use committed skills, agents, docs, and `AGENTS.md` for team-shared behavior.
 
 ## OpenWork lookup and tool routing
 
@@ -112,6 +113,23 @@ Before reporting a meaningful task complete, run a memory check:
 5. If promoted, merge relevant candidate content into the right topic file, delete obsolete candidate files, remove stale candidate rows from `memory/index.md`, and append `memory/log.md`.
 6. If nothing qualifies, state: `Memory check: nothing worth capturing.`
 
+## Session-end repository sync check
+
+Use the `session-end-sync` skill before ending a meaningful session in this workspace, especially when the user says `done`, `wrap up`, `finish`, `end session`, or asks for final status.
+
+Goal: help teammates keep this shared GitHub-backed workspace current without pulling over local work.
+
+Behavior:
+
+1. If the workspace is not a git repository or has no upstream, report that sync check is unavailable and continue.
+2. Run `git fetch --prune` to refresh remote refs.
+3. Check branch relationship to upstream with `git status --short --branch` and `git rev-list --left-right --count HEAD...@{upstream}`.
+4. If local branch is behind upstream and working tree is clean, offer to pull changes. Do not pull without explicit user confirmation.
+5. If local branch is behind upstream and working tree has local changes, do not pull. Offer safe choices: inspect incoming commits, commit local work, stash local work, or skip.
+6. If local branch has diverged, do not pull automatically. Explain that manual review or rebase/merge decision is needed.
+7. If no remote updates exist, say so briefly.
+8. Never run destructive git commands, force-push, reset, clean, or discard local changes without explicit user confirmation.
+
 ## Session workflow
 
 Use OpenWork session groups to keep work organized. Preferred default groups:
@@ -174,7 +192,8 @@ Use reusable project files when behavior becomes repeated:
 
 - `.opencode/skills/<skill-name>/SKILL.md` for repeatable workflows.
 - `.opencode/agents/<agent-name>.md` for role-specific agent behavior.
-- `opencode.jsonc` for OpenCode/OpenWork configuration.
+- `AGENTS.md` for team-shared operating rules.
+- `opencode.jsonc` only for local private OpenCode/OpenWork configuration. This file is gitignored.
 
 Create new skills or agents only when the user asks or agrees.
 
