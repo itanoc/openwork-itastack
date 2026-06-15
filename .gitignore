@@ -47,3 +47,6 @@ prototypes/
 
 # Generated YouTube extraction artifacts
 /youtube/
+
+# Generated OpenWork artifacts
+/artifacts/
