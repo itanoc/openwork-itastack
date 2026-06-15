@@ -1,11 +1,13 @@
 ---
 name: session-end-sync
-description: Use when ending or wrapping up an OpenWork session in this shared GitHub workspace; checks whether upstream has updates and offers safe pull options without overwriting local work.
+description: Check GitHub updates after 5 or more assistant turns, and before ending or wrapping up; notifies non-technical users when updates are available and waits for confirmation before pulling.
 ---
 
 # Session End Sync
 
-Use this skill before ending a meaningful session in this shared GitHub-backed workspace, especially when the user says any of these phrases:
+Use this skill after 5 or more assistant turns in any git repository with an upstream. Repeat about every 5 assistant turns after that during longer sessions.
+
+Also use this skill before ending or wrapping up a session, especially when the user says any of these phrases:
 
 - `done`
 - `wrap up`
@@ -16,7 +18,7 @@ Use this skill before ending a meaningful session in this shared GitHub-backed w
 
 ## Purpose
 
-Keep teammates' local OpenWork workspace configuration current with the shared GitHub repository, while avoiding accidental pulls over local edits.
+Help non-technical teammates notice GitHub updates early, while avoiding accidental pulls over local edits.
 
 ## Safety rules
 
@@ -32,16 +34,16 @@ Keep teammates' local OpenWork workspace configuration current with the shared G
    - `git rev-parse --is-inside-work-tree`
 2. Confirm the current branch has an upstream:
    - `git rev-parse --abbrev-ref --symbolic-full-name @{upstream}`
-3. Refresh remote refs:
-   - `git fetch --prune`
-4. Check status:
+3. Run the simplest quiet sync check:
+   - `git fetch --prune --quiet && git status --short --branch`
+4. If deeper ahead/behind counts are needed, run:
    - `git status --short --branch`
 5. Check ahead/behind counts:
    - `git rev-list --left-right --count HEAD...@{upstream}`
    - Output is `<ahead> <behind>`.
 6. Interpret results:
    - `behind = 0`: report no upstream updates.
-   - `behind > 0` and clean working tree: offer to pull.
+   - `behind > 0` and clean working tree: notify the user with simple wording: `GitHub updates are available. Reply yes to update.`
    - `behind > 0` and local changes exist: do not pull; offer safe choices.
    - `ahead > 0` and `behind > 0`: report divergence; ask whether to inspect, merge, or rebase.
 7. If user confirms pull and working tree is clean:
@@ -53,7 +55,7 @@ Keep teammates' local OpenWork workspace configuration current with the shared G
 Use concise status text:
 
 ```text
-Repo sync check: remote has 2 new commits. Working tree clean. Pull now? I will use `git pull --ff-only`.
+GitHub updates are available. Reply yes to update.
 ```
 
 or:

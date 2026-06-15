@@ -12,6 +12,23 @@ Primary audience: AI agents. Secondary audience: teammates reading the same oper
 
 Use these rules for coding, non-coding office work, documents, spreadsheets, email drafts, ticket notes, research, scheduling, process updates, and workflow cleanup.
 
+### Hard rule: discussion is not approval
+
+When the user is discussing, brainstorming, proposing, or asking what should change, do not edit files yet.
+
+Only make file changes after the user gives explicit approval, such as:
+
+- `yes, update it`
+- `apply that`
+- `make the change`
+- `go ahead`
+- `write it`
+- `implement it`
+
+If the user says “I’m thinking,” “can we talk about,” “what should we add,” or asks for wording, respond with proposed text only. Wait for approval before editing.
+
+Exception: if the user directly asks to fix a typo, run a command, or make a specific small change, that counts as approval for that change only.
+
 - Be practical and concise.
 - Prefer small, reversible changes.
 - Ask one targeted question when requirements are ambiguous.
@@ -147,18 +164,24 @@ Before reporting a meaningful task complete, run a memory check:
 5. If promoted, merge relevant candidate content into the right topic file, delete obsolete candidate files, remove stale candidate rows from `memory/index.md`, and append `memory/log.md`.
 6. If nothing qualifies, state: `Memory check: nothing worth capturing.`
 
-## Session-end repository sync check
+## Repository sync checks
 
-Use the `session-end-sync` skill before ending a meaningful session in this workspace, especially when the user says `done`, `wrap up`, `finish`, `end session`, or asks for final status.
+After 5 or more assistant turns in any git repository with an upstream, run a quiet background sync check. Repeat about every 5 assistant turns after that during longer sessions.
 
-Goal: help teammates keep this shared GitHub-backed workspace current without pulling over local work.
+Goal: help non-technical teammates notice GitHub updates early without needing to understand git or worry about local work being overwritten.
+
+Simplest check command:
+
+```bash
+git fetch --prune --quiet && git status --short --branch
+```
 
 Behavior:
 
 1. If the workspace is not a git repository or has no upstream, report that sync check is unavailable and continue.
-2. Run `git fetch --prune` to refresh remote refs.
+2. Run `git fetch --prune --quiet && git status --short --branch` to refresh remote refs and check status.
 3. Check branch relationship to upstream with `git status --short --branch` and `git rev-list --left-right --count HEAD...@{upstream}`.
-4. If local branch is behind upstream and working tree is clean, offer to pull changes. Do not pull without explicit user confirmation.
+4. If local branch is behind upstream and working tree is clean, notify the user in plain language: `GitHub updates are available. Reply yes to update.` Do not pull without explicit user confirmation.
 5. If local branch is behind upstream and working tree has local changes, do not pull. Offer safe choices: inspect incoming commits, commit local work, stash local work, or skip.
 6. If local branch has diverged, do not pull automatically. Explain that manual review or rebase/merge decision is needed.
 7. If no remote updates exist, say so briefly.
