@@ -1,7 +1,7 @@
 ---
 name: openwork-onboarding
 description: |
-  Guide first-time teammates through OpenWork Desktop onboarding, including teammate profile capture, HaloPSA agent lookup, AGENTS.md profile setup, safe file/browser checks, Claude Code presence, and dynamic MCP/report examples.
+  Guide first-time teammates through OpenWork Desktop onboarding, including teammate profile capture, HaloPSA agent lookup, AGENTS.md profile setup, safe file/browser checks, Claude Code presence, workstation tool readiness, and dynamic MCP/report examples.
 
   Triggers when user mentions:
   - "OpenWork onboarding"
@@ -13,7 +13,7 @@ description: |
 
 Use this skill when a teammate needs a guided first-run walkthrough of OpenWork Desktop.
 
-Goal: capture the teammate's workspace identity, fetch their HaloPSA agent details, add confirmed profile context near the top of `AGENTS.md`, prove OpenWork can safely create/edit files, use the built-in browser for browser automations, detect possible Claude Code overlap, and show how MCP/extensions can pull information into a report.
+Goal: capture the teammate's workspace identity, fetch their HaloPSA agent details, add confirmed profile context near the top of `AGENTS.md`, prove OpenWork can safely create/edit files, use the built-in browser for browser automations, detect possible Claude Code overlap, check common workstation tools used by coding agents and office/report automation, and show how MCP/extensions can pull information into a report.
 
 Audience: non-technical or mixed-technical team members using OpenWork for the first time.
 
@@ -26,6 +26,7 @@ This onboarding starts by capturing the teammate's basic work identity so future
 - Treat teammate profile data as shared workspace context, not private memory. Before writing name, Halo agent ID, email, initials, teams, timezone, workday, or active status to `AGENTS.md`, tell the user that `AGENTS.md` is repo/shared workspace context and ask for explicit confirmation.
 - Store only onboarding-safe HaloPSA fields in `AGENTS.md`. Do not paste the raw Halo agent payload, department role GUIDs, cost/rate fields, billing flags, phone/SMS fields, or third-party authorization flags.
 - Do not guess HaloPSA agent details. If Halo lookup fails or has multiple matches, ask the user to choose or continue with unknown values.
+- Do not install workstation tools, packages, CLIs, or dependencies without explicit approval. Explain purpose, likely admin prompts, and consequences of skipping before asking.
 - If Claude Code is not installed, continue silently.
 - If Claude Code is installed, ask before changing anything related to Claude Code, Claude Code skills, or shared skill paths.
 - Use harmless demo files under `onboarding/` in the current workspace.
@@ -39,6 +40,7 @@ Create or update:
 - `onboarding/openwork-demo.txt` — simple file creation/editing demo.
 - `onboarding/openwork-onboarding-report.md` — run log and results.
 - Optionally `onboarding/example-report.md` — sample report generated from available read-only MCP/extension data.
+- Optionally `onboarding/package-check.xlsx` — proof that the local Python reporting bundle can create Excel workbooks.
 - `AGENTS.md` — update near the top with the confirmed onboarded teammate profile, unless the user declines.
 
 If OpenWork shows a skill reload banner after this skill is installed or updated, reload skills before running onboarding.
@@ -48,6 +50,7 @@ If OpenWork shows a skill reload banner after this skill is installed or updated
 - Workspace write access for `onboarding/`.
 - Built-in browser access for `https://example.com`.
 - Shell access for OS and Claude Code detection.
+- Optional: shell access for checking Python, uv, Git, Node.js/npm, OS package managers, and local reporting packages.
 - Read-only HaloPSA agent lookup access, or user-provided fallback values if Halo is unavailable.
 - Optional: OpenWork UI actions for editor/navigation demos.
 - Optional: extension/MCP action access for dynamic final demo.
@@ -390,7 +393,208 @@ Stop here and check in with the user:
 
 Wait for the user to continue before writing the final onboarding report.
 
-### 10. Write final onboarding report
+### 10. Optional workstation readiness check: install common agent tools
+
+Purpose: help the teammate install common local tools during onboarding so OpenWork does not stop later in the middle of real work.
+
+This step is optional, but strongly recommended. It is not just for developers. Many normal OpenWork tasks rely on local command-line tools behind the scenes, including Excel reports, CSV cleanup, PDF parsing, document generation, chart creation, repeatable checks, browser previews, and small automation scripts.
+
+Before running checks, tell the teammate:
+
+> This step is optional, but I strongly recommend completing it now. If we skip it, OpenWork may stop later and ask you to install tools in the middle of real work. Installing them during onboarding means future tasks like Excel reports, project closeouts, ticket exports, PDF parsing, and data cleanup are more likely to work without interruption.
+
+Give concrete examples:
+
+- Creating an Excel workbook from ticket or project data often needs Python plus Excel libraries.
+- Making a formatted `.xlsx` report may require Python packages such as `openpyxl` or `xlsxwriter`.
+- Cleaning, filtering, and merging CSV exports is faster and safer with Python and `pandas`.
+- Creating Word documents, PowerPoint decks, charts, or PDF extracts may require Python report packages.
+- Running repeatable remediation or investigation scripts often depends on Python or `uv`.
+- Installing task-specific helpers safely without polluting the whole computer is easier with `uv`.
+- Using many community MCP tools, browser previews, or developer utilities may require Node.js/npm.
+
+Ask one targeted question before checking tools:
+
+> I can check for Python, uv, Git, Node.js/npm, and OS-specific package tools. These help OpenWork create Excel files, process reports, run repeatable checks, and avoid future interruptions. Do you want me to run the readiness check now?
+
+If the user declines, record the skip in `onboarding/openwork-onboarding-report.md` and continue. Do not pressure them beyond one concise explanation of consequences.
+
+#### Tool checks by OS
+
+Use OS-appropriate commands. If the current OpenWork agent runtime is not the same OS as the teammate's computer, ask the teammate to run the checks locally and paste output. Do not pretend the current host proves the teammate's machine state.
+
+macOS/Linux:
+
+```bash
+uname -s
+python3 --version
+uv --version
+git --version
+node --version
+npm --version
+```
+
+macOS additional:
+
+```bash
+brew --version
+xcode-select -p
+```
+
+Windows PowerShell:
+
+```powershell
+$PSVersionTable.PSVersion
+py --version
+python --version
+python3 --version
+py -c "import sys; print(sys.executable); print(sys.version)"
+uv --version
+where.exe uv
+git --version
+where.exe git
+node --version
+where.exe node
+npm --version
+winget --version
+```
+
+Windows command preference:
+
+- Prefer `py` first for Python checks, then `python`, then `python3`.
+- Do not assume `python3` is the best Windows Python command. On some machines it resolves to a Microsoft Store Python while `py` and `python` resolve to a newer separately installed Python.
+- Use `py -c "import sys; print(sys.executable)"` to record the actual Python executable.
+- Use `where.exe uv`, `where.exe git`, and `where.exe node` to record command precedence when multiple installs exist.
+- Developer workstations may have several Python, Node.js, or uv installs. Typical onboarding users may have none. Command behavior is more important than package-manager records.
+
+Recommended core tools:
+
+- Python 3 — powers Excel, CSV, PDF, report, cleanup, and automation workflows.
+- `uv` — creates isolated Python environments and installs Python helpers quickly and safely.
+- Git — lets OpenWork inspect workspace history, compare changes, and work with shared configuration safely.
+- Node.js/npm — supports many MCP servers, browser tooling, previews, and JavaScript utilities.
+
+OS-specific useful tools:
+
+- Homebrew on macOS — simplest package manager for Python, uv, Git, Node.js, and other tools.
+- Xcode Command Line Tools on macOS — required by some build/install workflows.
+- winget on Windows — simplest package manager for Windows installs.
+- PowerShell 7 on Windows — better shell compatibility for modern automation.
+- VS Code command-line launcher, only if the team uses VS Code.
+- `pipx`, only if the team commonly installs standalone Python CLI apps that way.
+
+#### Install guidance
+
+Never install anything automatically without explicit approval. Ask before each installation group, or ask for one approval covering the recommended tool bundle. Explain that installs may require admin rights. Never ask for passwords; if elevation appears, the user should handle it directly.
+
+Preferred macOS approach:
+
+- If Homebrew is available, prefer Homebrew.
+- Python: `brew install python`
+- uv: `brew install uv`
+- Git: `brew install git`
+- Node.js/npm: `brew install node`
+
+Preferred Windows approach:
+
+- Treat winget as an install helper, not the source of truth for whether a command works.
+- Check command behavior first: `py --version`, `uv --version`, `git --version`, `node --version`, and `npm --version`.
+- Use winget package IDs only for install recommendations when a command is missing or unsuitable.
+- Use `winget show --id <package-id> --exact --accept-source-agreements` before install to preview package metadata.
+- Do not rely on `winget install --dry-run`; it is not supported on all Windows Package Manager versions.
+- Do not rely on `winget --output json`; it is not supported on all Windows Package Manager versions.
+- Expect winget output to include progress bars/spinner characters. Summarize results instead of pasting raw output into the onboarding report.
+- Use safer install flags when winget is approved: `--exact --scope user --silent --accept-package-agreements --accept-source-agreements --no-upgrade --disable-interactivity`.
+- Python: `winget install --id Python.Python.3.12 --exact --scope user --silent --accept-package-agreements --accept-source-agreements --no-upgrade --disable-interactivity`
+- uv: `winget install --id astral-sh.uv --exact --scope user --silent --accept-package-agreements --accept-source-agreements --no-upgrade --disable-interactivity` when available, otherwise use the official Astral installer with user approval.
+- Git: `winget install --id Git.Git --exact --scope user --silent --accept-package-agreements --accept-source-agreements --no-upgrade --disable-interactivity`
+- Node.js/npm: `winget install --id OpenJS.NodeJS.LTS --exact --scope user --silent --accept-package-agreements --accept-source-agreements --no-upgrade --disable-interactivity`
+- PowerShell 7: `winget install --id Microsoft.PowerShell --exact --scope user --silent --accept-package-agreements --accept-source-agreements --no-upgrade --disable-interactivity`
+- After every winget install, verify the active command with `where.exe <command>` and `<command> --version`. winget success does not guarantee its installed command wins PATH precedence.
+- If multiple command paths exist and an older one appears first, report a PATH precedence issue instead of assuming the install failed.
+
+Preferred Linux approach:
+
+- Identify distro first.
+- Use the native package manager where practical: `apt`, `dnf`, `yum`, `pacman`, or the organization's standard package manager.
+- Install Python 3, Git, and Node.js/npm from trusted distro or vendor repositories.
+- Install uv using the official Astral installer or approved package source.
+
+#### Optional local Python reporting/data package bundle
+
+If Python and uv are available, offer to install a local reporting/data package bundle. Explain that these packages enable common non-coding OpenWork work: Excel workbooks, Word documents, PowerPoint decks, PDF extraction, CSV cleanup, charts, API pulls, HTML parsing, and template-based reports.
+
+Recommended bundle:
+
+- `openpyxl` — create and edit `.xlsx` Excel workbooks.
+- `xlsxwriter` — create formatted Excel workbooks with tables, formulas, charts, and styles.
+- `pandas` — clean, filter, merge, summarize, and export tabular data.
+- `python-docx` — create or edit Word `.docx` documents.
+- `python-pptx` — create PowerPoint `.pptx` decks.
+- `pypdf` — read, split, merge, or extract text from PDFs.
+- `pillow` — basic image processing for screenshots and report images.
+- `matplotlib` — create charts and graphs.
+- `requests` — call APIs and download files.
+- `beautifulsoup4` — parse HTML pages and tables.
+- `lxml` — faster and more capable XML/HTML parsing.
+- `pyyaml` — read and write YAML config and workflow files.
+- `jinja2` — fill reusable report and document templates.
+- `rich` — cleaner terminal output for scripts.
+
+Ask before installing:
+
+> Do you want me to install the recommended local Python reporting bundle now? This helps future OpenWork tasks create Excel files, clean CSVs, parse PDFs, generate charts, and build reports without stopping to install packages later.
+
+Do not install the bundle globally with `pip install ...` by default. Prefer a workspace-managed environment for proof during onboarding:
+
+```bash
+uv venv onboarding/.venv
+uv pip install --python onboarding/.venv/bin/python openpyxl xlsxwriter pandas python-docx python-pptx pypdf pillow matplotlib requests beautifulsoup4 lxml pyyaml jinja2 rich
+```
+
+On Windows, the venv Python path is typically:
+
+```powershell
+onboarding\.venv\Scripts\python.exe
+```
+
+Windows local venv install example:
+
+```powershell
+uv venv onboarding\.venv
+uv pip install --python onboarding\.venv\Scripts\python.exe openpyxl xlsxwriter pandas python-docx python-pptx pypdf pillow matplotlib requests beautifulsoup4 lxml pyyaml jinja2 rich
+```
+
+After installation, run an import proof using the venv Python. Use the correct Python path for the OS:
+
+```bash
+onboarding/.venv/bin/python -c "import openpyxl, xlsxwriter, pandas, docx, pptx, pypdf, PIL, matplotlib, requests, bs4, lxml, yaml, jinja2, rich; print('ok')"
+```
+
+Windows import proof:
+
+```powershell
+onboarding\.venv\Scripts\python.exe -c "import openpyxl, xlsxwriter, pandas, docx, pptx, pypdf, PIL, matplotlib, requests, bs4, lxml, yaml, jinja2, rich; print('ok')"
+```
+
+Create `onboarding/package-check.xlsx` with `openpyxl` to prove Excel creation works. The workbook should contain a simple sheet named `Package Check` with rows for package, purpose, and status. Keep it harmless and non-client-specific.
+
+If any package fails to install or import, record the failure and continue unless the user wants to troubleshoot. Do not let optional package setup block core onboarding.
+
+Record in `onboarding/openwork-onboarding-report.md`:
+
+- Tool checks run or skipped.
+- Python, uv, Git, Node.js/npm status.
+- Windows command precedence from `where.exe` for uv, Git, Node.js, and other tools when checked.
+- OS package manager status.
+- Missing tools and recommended install command.
+- winget package availability from `winget show`, when used.
+- PATH precedence issues discovered after install.
+- Whether installs were approved, completed, failed, or skipped.
+- Python reporting bundle status: installed, partially installed, failed, or skipped.
+- `onboarding/package-check.xlsx` creation status when attempted.
+
+### 11. Write final onboarding report
 
 Create or update `onboarding/openwork-onboarding-report.md` with:
 
@@ -431,6 +635,8 @@ Create or update `onboarding/openwork-onboarding-report.md` with:
 | Claude Code blocking | <not asked/left unchanged/review requested/changed> | <notes> |
 | MCP/extensions | <found/not found> | <count/list summary> |
 | Personal profile | <updated/declined/fail> | <Halo agent ID/email or reason skipped> |
+| Workstation readiness | <pass/partial/skipped/fail> | <Python/uv/Git/Node/package manager summary> |
+| Python reporting bundle | <installed/partial/skipped/fail> | <venv path/package-check.xlsx status> |
 
 ## Detailed Results
 
@@ -445,6 +651,8 @@ Create or update `onboarding/openwork-onboarding-report.md` with:
 - OpenWork can use configured MCP/extensions to retrieve information.
 - OpenWork can save results into workspace reports.
 - OpenWork can look up your HaloPSA agent record and, with confirmation, save onboarding-safe teammate context near the top of `AGENTS.md`.
+- OpenWork can check whether common local tools are available before real work depends on them.
+- Installing Python, uv, and the local reporting bundle during onboarding helps future Excel, CSV, PDF, document, chart, and automation tasks work without stopping later.
 
 ## Useful next prompts
 
@@ -454,7 +662,7 @@ Create or update `onboarding/openwork-onboarding-report.md` with:
 - "Create a checklist for this process in the workspace."
 ```
 
-### 11. Close onboarding
+### 12. Close onboarding
 
 End with concise next steps:
 
@@ -462,6 +670,8 @@ End with concise next steps:
 - Mention whether `AGENTS.md` was updated with the teammate profile.
 - Mention whether browser automation passed.
 - Mention whether Claude Code was detected only if detected or if report includes it.
+- Mention whether workstation readiness was checked, skipped, or needs follow-up.
+- Mention `onboarding/package-check.xlsx` if the Python reporting bundle proof file was created.
 - Mention how to add extensions: Settings > Extensions.
 - Mention how to manage folders: Settings > Permissions.
 - Ask whether the user wants to keep or delete demo files. Default: keep them as proof of onboarding.
@@ -486,4 +696,10 @@ End with concise next steps:
 - [ ] MCP/extension example stayed dynamic.
 - [ ] Created and opened or directed user to `onboarding/example-report.md` as the one document example.
 - [ ] Stopped after example report opened and checked for questions.
+- [ ] Asked before running the optional workstation readiness check.
+- [ ] Checked Python, uv, Git, Node.js/npm, and OS package manager using OS-appropriate commands, or recorded skip.
+- [ ] Explained why each missing tool matters before asking to install it.
+- [ ] Did not install tools, packages, CLIs, or dependencies without explicit approval.
+- [ ] Installed the Python reporting bundle only in a local environment by default, or recorded skip/failure.
+- [ ] Verified Python reporting packages by importing them and creating `onboarding/package-check.xlsx`, or recorded why verification was skipped.
 - [ ] Wrote `onboarding/openwork-onboarding-report.md`.
