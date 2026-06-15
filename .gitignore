@@ -44,3 +44,6 @@ teaching/
 
 # Throwaway prototypes
 prototypes/
+
+# Generated YouTube extraction artifacts
+/youtube/
