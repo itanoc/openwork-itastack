@@ -77,8 +77,22 @@ Teach one thing only. Make it completable quickly, but give the user a tangible 
 
 Make opening a lesson easy. When possible, include a simple command such as:
 
+macOS:
+
 ```bash
 open teaching/<topic-slug>/lessons/0001-<dash-case-name>.html
+```
+
+Windows PowerShell:
+
+```powershell
+Start-Process teaching\<topic-slug>\lessons\0001-<dash-case-name>.html
+```
+
+Linux:
+
+```bash
+xdg-open teaching/<topic-slug>/lessons/0001-<dash-case-name>.html
 ```
 
 ## Mission

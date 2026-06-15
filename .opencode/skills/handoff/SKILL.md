@@ -18,10 +18,19 @@ Preserve current session context so fresh OpenWork session or agent can continue
    - blockers, risks, assumptions, and next steps
    - suggested skills for next session
 3. Avoid duplicating content already captured in artifacts, PRDs, plans, ADRs, issues, commits, or diffs. Reference those by path, ticket ID, URL, or commit instead.
-4. Create handoff document at temp path produced by:
+4. Create handoff document at temp path produced by the current OS:
+
+   macOS/Linux shell:
 
    ```bash
    mktemp -t handoff-XXXXXX.md
+   ```
+
+   Windows PowerShell:
+
+   ```powershell
+   $Path = Join-Path ([System.IO.Path]::GetTempPath()) "handoff-$([guid]::NewGuid()).md"
+   New-Item -ItemType File -Path $Path | Select-Object -ExpandProperty FullName
    ```
 
    Read file before writing to it.

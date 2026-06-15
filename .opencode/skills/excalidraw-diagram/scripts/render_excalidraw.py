@@ -1,10 +1,16 @@
-"""Render Excalidraw JSON to PNG using Playwright + headless Chromium.
+r"""Render Excalidraw JSON to PNG using Playwright + headless Chromium.
 
-Usage:
+    Usage, macOS/Linux shell:
     cd .opencode/skills/excalidraw-diagram/scripts
     uv run python render_excalidraw.py ../../../../artifacts/diagrams/example.excalidraw
     # or without uv:
     # . .venv/bin/activate && python render_excalidraw.py ../../../../artifacts/diagrams/example.excalidraw
+
+    Usage, Windows PowerShell:
+    cd .opencode\skills\excalidraw-diagram\scripts
+    uv run python render_excalidraw.py ..\..\..\..\artifacts\diagrams\example.excalidraw
+    # or without uv:
+    # .\.venv\Scripts\Activate.ps1; python render_excalidraw.py ..\..\..\..\artifacts\diagrams\example.excalidraw
 
 First-time setup:
     cd .opencode/skills/excalidraw-diagram/scripts
@@ -84,7 +90,8 @@ def render(
         print("ERROR: playwright not installed.", file=sys.stderr)
         print("Run one setup path:", file=sys.stderr)
         print("  uv: cd .opencode/skills/excalidraw-diagram/scripts && uv sync && uv run playwright install chromium", file=sys.stderr)
-        print("  python: cd .opencode/skills/excalidraw-diagram/scripts && python3 -m venv .venv && . .venv/bin/activate && python -m pip install playwright && python -m playwright install chromium", file=sys.stderr)
+        print("  python macOS/Linux: cd .opencode/skills/excalidraw-diagram/scripts && python3 -m venv .venv && . .venv/bin/activate && python -m pip install playwright && python -m playwright install chromium", file=sys.stderr)
+        print(r"  python Windows PowerShell: cd .opencode\skills\excalidraw-diagram\scripts; py -m venv .venv; .\.venv\Scripts\Activate.ps1; python -m pip install playwright; python -m playwright install chromium", file=sys.stderr)
         print("If Python is unavailable, skip PNG and use the zero-install HTML preview.", file=sys.stderr)
         sys.exit(1)
 
@@ -126,7 +133,8 @@ def render(
                 print("ERROR: Chromium not installed for Playwright.", file=sys.stderr)
                 print("Run one setup path:", file=sys.stderr)
                 print("  uv: cd .opencode/skills/excalidraw-diagram/scripts && uv run playwright install chromium", file=sys.stderr)
-                print("  python: cd .opencode/skills/excalidraw-diagram/scripts && . .venv/bin/activate && python -m playwright install chromium", file=sys.stderr)
+                print("  python macOS/Linux: cd .opencode/skills/excalidraw-diagram/scripts && . .venv/bin/activate && python -m playwright install chromium", file=sys.stderr)
+                print(r"  python Windows PowerShell: cd .opencode\skills\excalidraw-diagram\scripts; .\.venv\Scripts\Activate.ps1; python -m playwright install chromium", file=sys.stderr)
                 print("If Python is unavailable, skip PNG and use the zero-install HTML preview.", file=sys.stderr)
                 sys.exit(1)
             raise

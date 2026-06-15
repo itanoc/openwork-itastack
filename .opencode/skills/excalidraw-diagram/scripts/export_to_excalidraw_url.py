@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Serve a local Excalidraw editor URL for a .excalidraw scene.
+r"""Serve a local Excalidraw editor URL for a .excalidraw scene.
 
-Usage:
+    Usage, macOS/Linux shell:
     cd .opencode/skills/excalidraw-diagram/scripts
     uv run python export_to_excalidraw_url.py ../../../../artifacts/diagrams/example.excalidraw --port 0
     # or without uv:
     # . .venv/bin/activate && python export_to_excalidraw_url.py ../../../../artifacts/diagrams/example.excalidraw --port 0
+
+    Usage, Windows PowerShell:
+    cd .opencode\skills\excalidraw-diagram\scripts
+    uv run python export_to_excalidraw_url.py ..\..\..\..\artifacts\diagrams\example.excalidraw --port 0
+    # or without uv:
+    # .\.venv\Scripts\Activate.ps1; python export_to_excalidraw_url.py ..\..\..\..\artifacts\diagrams\example.excalidraw --port 0
 """
 
 from __future__ import annotations

@@ -33,17 +33,35 @@ PNG export is optional. Use only when local tools exist.
 
 From workspace root:
 
+macOS/Linux shell:
+
 ```bash
 cd .opencode/skills/excalidraw-diagram/scripts && uv sync && uv run playwright install chromium
 ```
 
+Windows PowerShell:
+
+```powershell
+cd .opencode\skills\excalidraw-diagram\scripts; uv sync; uv run playwright install chromium
+```
+
 Render:
+
+macOS/Linux shell:
 
 ```bash
 cd .opencode/skills/excalidraw-diagram/scripts && uv run python render_excalidraw.py ../../../../artifacts/diagrams/my-diagram.excalidraw
 ```
 
+Windows PowerShell:
+
+```powershell
+cd .opencode\skills\excalidraw-diagram\scripts; uv run python render_excalidraw.py ..\..\..\..\artifacts\diagrams\my-diagram.excalidraw
+```
+
 ### Fallback: Python available, uv missing
+
+macOS/Linux shell:
 
 ```bash
 cd .opencode/skills/excalidraw-diagram/scripts
@@ -54,12 +72,33 @@ python -m pip install playwright
 python -m playwright install chromium
 ```
 
+Windows PowerShell:
+
+```powershell
+cd .opencode\skills\excalidraw-diagram\scripts
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+python -m pip install playwright
+python -m playwright install chromium
+```
+
 Render:
+
+macOS/Linux shell:
 
 ```bash
 cd .opencode/skills/excalidraw-diagram/scripts
 . .venv/bin/activate
 python render_excalidraw.py ../../../../artifacts/diagrams/my-diagram.excalidraw
+```
+
+Windows PowerShell:
+
+```powershell
+cd .opencode\skills\excalidraw-diagram\scripts
+.\.venv\Scripts\Activate.ps1
+python render_excalidraw.py ..\..\..\..\artifacts\diagrams\my-diagram.excalidraw
 ```
 
 Output PNG is written next to source `.excalidraw` file.
@@ -74,16 +113,34 @@ Requires Python. If Python is unavailable, tell user to upload/open the `.excali
 
 With uv:
 
+macOS/Linux shell:
+
 ```bash
 cd .opencode/skills/excalidraw-diagram/scripts && uv run python export_to_excalidraw_url.py ../../../../artifacts/diagrams/my-diagram.excalidraw --port 0
 ```
 
+Windows PowerShell:
+
+```powershell
+cd .opencode\skills\excalidraw-diagram\scripts; uv run python export_to_excalidraw_url.py ..\..\..\..\artifacts\diagrams\my-diagram.excalidraw --port 0
+```
+
 With venv:
+
+macOS/Linux shell:
 
 ```bash
 cd .opencode/skills/excalidraw-diagram/scripts
 . .venv/bin/activate
 python export_to_excalidraw_url.py ../../../../artifacts/diagrams/my-diagram.excalidraw --port 0
+```
+
+Windows PowerShell:
+
+```powershell
+cd .opencode\skills\excalidraw-diagram\scripts
+.\.venv\Scripts\Activate.ps1
+python export_to_excalidraw_url.py ..\..\..\..\artifacts\diagrams\my-diagram.excalidraw --port 0
 ```
 
 Script prints `http://127.0.0.1:<port>`. Open that URL with OpenWork browser if user wants visual editing.

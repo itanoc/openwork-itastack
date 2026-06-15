@@ -143,6 +143,8 @@ Do **not** mix transcript-derived claims into `web-research.md`. Do **not** mix 
 
 4. Stage into temp directory so failed pull leaves no half-written artifact directory.
 
+   macOS/Linux shell:
+
    ```bash
    URL="<youtube-url>"
    TMPDIR="$(mktemp -d -t yt-extract-XXXXXX)"
@@ -157,6 +159,22 @@ Do **not** mix transcript-derived claims into `web-research.md`. Do **not** mix 
      "$URL"
    ```
 
+   Windows PowerShell:
+
+   ```powershell
+   $Url = "<youtube-url>"
+   $TmpDir = New-Item -ItemType Directory -Path ([System.IO.Path]::Combine($env:TEMP, "yt-extract-$([guid]::NewGuid())"))
+   yt-dlp `
+     --skip-download `
+     --write-auto-sub `
+     --write-sub `
+     --sub-lang en `
+     --sub-format vtt `
+     --write-info-json `
+     -o "$($TmpDir.FullName)\%(title)s [%(id)s].%(ext)s" `
+     "$Url"
+   ```
+
    Mandatory exact flags:
 
    ```text
@@ -169,11 +187,11 @@ Do **not** mix transcript-derived claims into `web-research.md`. Do **not** mix 
 
 5. Handle pull failures:
 
-   - Age-restricted, region-blocked, or private: messages like `ERROR: Sign in to confirm`, `Video unavailable`, `is not available`. Delete `${TMPDIR}`, report reason, stop.
-   - No English subtitles: if no `.en.vtt` exists in `${TMPDIR}` after successful pull, delete `${TMPDIR}`, report unavailable, stop. Audio transcription fallback is out of scope unless user explicitly asks.
-   - Network, DNS, or transient errors: report stderr verbatim, delete `${TMPDIR}`, stop.
+   - Age-restricted, region-blocked, or private: messages like `ERROR: Sign in to confirm`, `Video unavailable`, `is not available`. Delete the temp directory, report reason, stop.
+   - No English subtitles: if no `.en.vtt` exists in the temp directory after successful pull, delete the temp directory, report unavailable, stop. Audio transcription fallback is out of scope unless user explicitly asks.
+   - Network, DNS, or transient errors: report stderr verbatim, delete the temp directory, stop.
 
-6. Locate files in `${TMPDIR}`:
+6. Locate files in the temp directory:
 
    - One `.info.json`.
    - One English `.en.vtt`. With both `--write-sub` and `--write-auto-sub`, pick whichever English VTT exists. Do not assume both exist.
@@ -181,6 +199,8 @@ Do **not** mix transcript-derived claims into `web-research.md`. Do **not** mix 
 ## Step 3: Parse Metadata
 
 Run Python over `.info.json` and hold fixed fields for both docs. Description is truncated to 500 characters.
+
+macOS/Linux shell:
 
 ```bash
 python3 - <<'PY' "${TMPDIR}"/*.info.json
@@ -196,6 +216,25 @@ print(f"view_count:   {m.get('view_count')}")
 print(f"like_count:   {m.get('like_count')}")
 print(f"description:  {desc}")
 PY
+```
+
+Windows PowerShell:
+
+```powershell
+$InfoJson = Get-ChildItem -Path $TmpDir.FullName -Filter *.info.json | Select-Object -First 1
+@'
+import json, sys
+m = json.load(open(sys.argv[1], encoding="utf-8"))
+desc = (m.get("description") or "")[:500]
+print(f"title:        {m.get('title')}")
+print(f"uploader:     {m.get('uploader')}")
+print(f"channel:      {m.get('channel')}")
+print(f"upload_date:  {m.get('upload_date')}")
+print(f"duration:     {m.get('duration')}")
+print(f"view_count:   {m.get('view_count')}")
+print(f"like_count:   {m.get('like_count')}")
+print(f"description:  {desc}")
+'@ | py - $InfoJson.FullName
 ```
 
 ## Step 4: Create Artifact Directory
@@ -222,12 +261,24 @@ After pull and metadata parse succeed, compute final output path and move temp f
 
 3. Create directories and move pulled files. Quote every path because titles may contain spaces and brackets.
 
+   macOS/Linux shell:
+
    ```bash
    OUT_DIR="youtube/<slug>-<VIDEO_ID>"
    mkdir -p "${OUT_DIR}/raw"
    mv "${TMPDIR}"/*.en.vtt    "${OUT_DIR}/raw/"
    mv "${TMPDIR}"/*.info.json "${OUT_DIR}/raw/"
    rm -rf "${TMPDIR}"
+   ```
+
+   Windows PowerShell:
+
+   ```powershell
+   $OutDir = "youtube\<slug>-<VIDEO_ID>"
+   New-Item -ItemType Directory -Force -Path "$OutDir\raw" | Out-Null
+   Move-Item -Path (Join-Path $TmpDir.FullName "*.en.vtt") -Destination "$OutDir\raw"
+   Move-Item -Path (Join-Path $TmpDir.FullName "*.info.json") -Destination "$OutDir\raw"
+   Remove-Item -Recurse -Force $TmpDir.FullName
    ```
 
 ## Step 5: Write `transcript-extract.md`
@@ -395,14 +446,14 @@ Primary sources unreachable: {N} (see web-research.md → Primary Sources Attemp
 - Two artifacts, hard separation. Transcript-derived claims only in `transcript-extract.md`; web-derived claims only in `web-research.md`.
 - Read-only network posture. Never upload, post, authenticate, or download video media. `yt-dlp` uses `--skip-download`.
 - Create `youtube/` if missing; only writes go under `youtube/` at workspace root.
-- Stage pull in `mktemp -d`; never write directly into `youtube/` before pull succeeds.
+- Stage pull in an OS temp directory (`mktemp -d` on macOS/Linux, `$env:TEMP` with a GUID folder on Windows); never write directly into `youtube/` before pull succeeds.
 - Idempotent reruns use `<slug>-<VIDEO_ID>` suffix.
 - English only, v1. Cross-language subtitle support and audio transcription fallback are out of scope unless user asks.
 - Critical ordering:
   - Always detect OS and check `yt-dlp` exists before staging pull.
   - If missing, always ask before installing `yt-dlp` or dependencies.
   - Offer only OS-appropriate install commands.
-  - Always stage into `mktemp -d` first.
+  - Always stage into an OS temp directory first.
   - Always write `transcript-extract.md` with no external citations.
   - Always write `web-research.md` with cited external claims.
   - Never mix transcript-only and web-verified claims in same file.
