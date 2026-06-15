@@ -38,3 +38,6 @@ memory/workflows/**
 memory/raw/**
 !memory/raw/
 !memory/raw/.gitkeep
+
+# Throwaway prototypes
+prototypes/
