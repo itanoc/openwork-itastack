@@ -53,3 +53,7 @@ prototypes/
 
 # Local handoff documents
 /.handoff/
+
+# Local public-safe GitHub issue drafts
+.issues/*
+!.issues/.gitkeep
