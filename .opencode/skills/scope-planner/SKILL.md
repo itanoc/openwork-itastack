@@ -276,20 +276,8 @@ py .opencode\skills\scope-planner\scripts\write_scope.py `
    - task count
    - daily hour totals
    - any over-8-hour warnings
-6. Before replacing SharePoint file:
-   - Re-list the same SharePoint folder.
-   - Confirm the target workbook still has the same `id` and `e_tag` captured before download/write.
-   - If `id` differs, stop: target path may now point to a different file.
-   - If `e_tag` differs, stop: someone or something changed the workbook after download.
-7. Replace the existing workbook using `itastack_m365_replace_sharepoint_file`:
-   - `tenant`: target tenant code.
-   - `site_url`: SharePoint site URL.
-   - `target_path`: library-relative path to the existing workbook, omitting `Shared Documents`.
-   - `original_file_id`: captured file `id`.
-   - `original_etag`: latest verified `e_tag`.
-   - `file_base64`: base64 of the modified workbook bytes.
-   - `expected_sha256`: SHA256 of the modified workbook bytes.
-   - `confirm`: `true` only after explicit user approval of the final draft and exact target workbook.
+6. Before the replace, encode the local workbook in one shell step: `base64 < "<local_xlsx_path>" | tr -d '\n'`.
+7. Use that output as `file_base64`, then call `itastack_m365_replace_sharepoint_file` with `tenant`, `site_url`, `target_path`, `original_file_id`, `original_etag` from a fresh `itastack_m365_list_sharepoint_folder` preflight, `file_base64`, `expected_sha256` from the same local file, and `confirm=true`.
 8. After replace, re-list the folder and verify:
    - file `id` stayed the same
    - `e_tag` advanced
