@@ -18,24 +18,28 @@ Preserve current session context so fresh OpenWork session or agent can continue
    - blockers, risks, assumptions, and next steps
    - suggested skills for next session
 3. Avoid duplicating content already captured in artifacts, PRDs, plans, ADRs, issues, commits, or diffs. Reference those by path, ticket ID, URL, or commit instead.
-4. Create handoff document at temp path produced by the current OS:
+4. Create the handoff document under a workspace-local `handoff/` folder, creating the folder first if needed. Do not use OS temp folders such as `/var/folders`, `/tmp`, or `%TEMP%`.
 
    macOS/Linux shell:
 
    ```bash
-   mktemp -t handoff-XXXXXX.md
+   mkdir -p handoff
+   HANDOFF_PATH="handoff/handoff-$(date +%Y%m%d-%H%M%S).md"
+   : > "$HANDOFF_PATH"
    ```
 
    Windows PowerShell:
 
    ```powershell
-   $Path = Join-Path ([System.IO.Path]::GetTempPath()) "handoff-$([guid]::NewGuid()).md"
-   New-Item -ItemType File -Path $Path | Select-Object -ExpandProperty FullName
+   $Folder = Join-Path (Get-Location) "handoff"
+   New-Item -ItemType Directory -Force -Path $Folder | Out-Null
+   $Path = Join-Path $Folder "handoff-$(Get-Date -Format 'yyyyMMdd-HHmmss').md"
+   New-Item -ItemType File -Force -Path $Path | Select-Object -ExpandProperty FullName
    ```
 
-   Read file before writing to it.
+   Read the newly created file before writing to it. Handoff files are local workspace artifacts and must remain gitignored.
 5. Write concise Markdown handoff. Use normal prose in document, not chat-style caveman prose.
-6. Return only short copy-paste prompt for next session. Prompt must reference handoff file path and name any suggested skills to start with. Do not inline or reprint document contents.
+6. Return only short copy-paste prompt for next session. Prompt must reference the workspace-relative handoff file path and name any suggested skills to start with. Do not inline or reprint document contents.
 
 ## Handoff document shape
 
@@ -72,5 +76,5 @@ Preserve current session context so fresh OpenWork session or agent can continue
 ## Output prompt shape
 
 ```text
-Continue from handoff: <absolute-temp-file-path>. Focus on <next-session focus>. Start with skill(s): <skill names>, if useful.
+Continue from handoff: handoff/<handoff-file-name>. Focus on <next-session focus>. Start with skill(s): <skill names>, if useful.
 ```
