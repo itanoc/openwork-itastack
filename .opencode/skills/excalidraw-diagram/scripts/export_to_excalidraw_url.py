@@ -132,6 +132,7 @@ def main() -> None:
     parser.add_argument("input", type=Path, help="Path to .excalidraw scene")
     parser.add_argument("--port", type=int, default=0, help="Port to bind; 0 picks available port")
     parser.add_argument("--open", action="store_true", help="Open system browser automatically")
+    parser.add_argument("--url-file", type=Path, help="Write selected local URL to this file")
     args = parser.parse_args()
 
     if not args.input.exists():
@@ -149,6 +150,9 @@ def main() -> None:
 
     with ThreadingHTTPServer(("127.0.0.1", args.port), Handler) as httpd:
         url = f"http://127.0.0.1:{httpd.server_address[1]}"
+        if args.url_file:
+            args.url_file.parent.mkdir(parents=True, exist_ok=True)
+            args.url_file.write_text(url + "\n", encoding="utf-8")
         print(url, flush=True)
         if args.open:
             webbrowser.open(url)

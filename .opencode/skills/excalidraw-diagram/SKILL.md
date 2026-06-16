@@ -1,29 +1,54 @@
 ---
 name: excalidraw-diagram
-description: Create Excalidraw .excalidraw JSON diagrams plus zero-install HTML previews and optional PNG previews. Use when user asks for Excalidraw, diagram, flowchart, architecture diagram, workflow visualization, or visual explanation.
+description: Create Excalidraw .excalidraw JSON diagrams plus local Excalidraw editor previews, standalone HTML fallbacks, and optional PNG previews. Use when user asks for Excalidraw, diagram, flowchart, architecture diagram, workflow visualization, or visual explanation.
 ---
 
 # Excalidraw Diagram Creator
 
-Create workspace artifacts that OpenWork can preview and download. Assume teammates may have no `uv`, Python, Node, or other local runtime.
+Create workspace artifacts that OpenWork can preview and download. Prefer the local Excalidraw editor URL when Python is available; fall back to standalone HTML when no local runtime exists.
 
 - Source scene: `artifacts/diagrams/<name>.excalidraw`
-- Zero-install preview: `artifacts/diagrams/<name>.html`
+- Standalone HTML fallback preview: `artifacts/diagrams/<name>.html`
 - Optional rendered preview: `artifacts/diagrams/<name>.png`
-- Optional local editor URL from `scripts/export_to_excalidraw_url.py` when Python is available
+- Default local editor URL from `scripts/export_to_excalidraw_url.py` when Python is available
 
-Keep chat responses concise. Lead with artifact paths and any local URL.
+Keep chat responses concise. Lead with artifact paths and local editor URL.
 
-## Zero-install default
+## Default preview: local Excalidraw editor URL
 
-Always create these two files first:
+Always create source scene first:
 
 - `artifacts/diagrams/<name>.excalidraw`
+
+When Python is available, start the local editor server and open the printed URL in OpenWork built-in browser. This is the default because it loads the real Excalidraw editor and avoids `file://` sibling-fetch failures.
+
+From workspace root, start server in background and write the URL to a workspace artifact:
+
+macOS/Linux shell:
+
+```bash
+python3 .opencode/skills/excalidraw-diagram/scripts/export_to_excalidraw_url.py artifacts/diagrams/my-diagram.excalidraw --port 0 --url-file artifacts/diagrams/my-diagram.url > artifacts/diagrams/my-diagram.server.log 2>&1 &
+```
+
+Windows PowerShell:
+
+```powershell
+Start-Process py -ArgumentList '.opencode\skills\excalidraw-diagram\scripts\export_to_excalidraw_url.py','artifacts\diagrams\my-diagram.excalidraw','--port','0','--url-file','artifacts\diagrams\my-diagram.url' -RedirectStandardOutput 'artifacts\diagrams\my-diagram.server.log' -RedirectStandardError 'artifacts\diagrams\my-diagram.server.err.log'
+```
+
+Read `artifacts/diagrams/<name>.url`, then open that exact `http://127.0.0.1:<port>` URL with OpenWork browser controls.
+
+If Python is unavailable, create standalone HTML fallback instead.
+
+## Standalone HTML fallback
+
+Create this when Python is unavailable, when a persistent local server is not desired, or when user wants a downloadable preview that works from `file://`:
+
 - `artifacts/diagrams/<name>.html`
 
-The `.html` preview must use browser-native SVG/JS only and fetch the sibling `.excalidraw` file. No local install required. Use `references/html-preview-template.html` as the starting point.
+The `.html` preview must use browser-native SVG/JS only and embed scene JSON directly in the file. Do not use `fetch()` to load a sibling `.excalidraw`; browsers block that under `file://`. Use `references/html-preview-template.html` as the starting point and replace the `SCENE_DATA_PLACEHOLDER` token with the full scene JSON.
 
-If opened directly with `file://`, some browsers may block loading the sibling `.excalidraw` file. OpenWork preview or any static file server should work. If blocked, the `.excalidraw` file can still be opened manually in <https://excalidraw.com>.
+The `.excalidraw` file can always be opened manually in <https://excalidraw.com>.
 
 ## Optional PNG setup
 
@@ -105,11 +130,11 @@ Output PNG is written next to source `.excalidraw` file.
 
 ### Fallback: no Python and no uv
 
-Skip PNG generation. Create the zero-install `.html` preview and mention that PNG export requires Python/uv or manual export from Excalidraw.
+Skip PNG generation. Create the standalone `.html` preview and mention that PNG export requires Python/uv or manual export from Excalidraw.
 
-## Optional local Excalidraw editor
+## Local Excalidraw editor commands
 
-Requires Python. If Python is unavailable, tell user to upload/open the `.excalidraw` file at <https://excalidraw.com>.
+Requires Python. If Python is unavailable, create standalone HTML fallback and tell user they can also upload/open the `.excalidraw` file at <https://excalidraw.com>.
 
 With uv:
 
@@ -143,7 +168,7 @@ cd .opencode\skills\excalidraw-diagram\scripts
 python export_to_excalidraw_url.py ..\..\..\..\artifacts\diagrams\my-diagram.excalidraw --port 0
 ```
 
-Script prints `http://127.0.0.1:<port>`. Open that URL with OpenWork browser if user wants visual editing.
+Script prints `http://127.0.0.1:<port>`. Open that URL with OpenWork browser for default visual editing.
 
 ## Required references
 
@@ -152,7 +177,7 @@ Read before generating JSON:
 - `references/color-palette.md` — single source of truth for colors.
 - `references/element-templates.md` — copyable element shapes.
 - `references/json-schema.md` — compact schema reference.
-- `references/html-preview-template.html` — zero-install browser preview template.
+- `references/html-preview-template.html` — standalone browser preview template.
 
 Do not invent colors. Use palette semantics.
 
@@ -323,16 +348,17 @@ Do not write generator scripts for one-off diagrams. Hand-authored JSON is easie
 
 ## Preview-view-fix loop
 
-Visual validation is required after creating or editing diagram JSON. Do not require Python.
+Visual validation is required after creating or editing diagram JSON. Prefer Python-based local editor preview when available, but provide standalone HTML fallback when Python is unavailable.
 
-1. Create or update `.html` zero-install preview from `references/html-preview-template.html`.
-2. If Python/uv is available, also render `.excalidraw` to `.png`.
-3. View HTML preview or PNG preview.
-4. Audit concept:
+1. Start local Excalidraw editor URL from `scripts/export_to_excalidraw_url.py` when Python is available, then open it in OpenWork built-in browser.
+2. If Python is unavailable, create or update standalone `.html` fallback from `references/html-preview-template.html`.
+3. If Python/uv is available, also render `.excalidraw` to `.png`.
+4. View local editor URL, standalone HTML fallback, or PNG preview.
+5. Audit concept:
    - Structure matches intended argument?
    - Eye flows in designed order?
    - Visual hierarchy clear?
-5. Audit defects:
+6. Audit defects:
    - Text clipped or overflowing.
    - Text/shapes overlap.
    - Arrows cross through elements unnecessarily.
@@ -341,9 +367,9 @@ Visual validation is required after creating or editing diagram JSON. Do not req
    - Spacing uneven.
    - Text too small.
    - Composition lopsided.
-6. Fix JSON.
-7. Re-preview.
-8. Repeat until diagram can be shown without caveats.
+7. Fix JSON.
+8. Re-preview.
+9. Repeat until diagram can be shown without caveats.
 
 ## Quality checklist
 
@@ -358,7 +384,8 @@ Visual validation is required after creating or editing diagram JSON. Do not req
 - Text readable and unclipped.
 - Arrows connect to intended elements.
 - Spacing balanced.
-- HTML preview created and inspected.
+- Local Excalidraw editor URL opened and inspected when Python is available.
+- Standalone HTML fallback created and inspected when Python is unavailable or user requests downloadable preview.
 - PNG rendered when local runtime exists.
 
 ## Final response

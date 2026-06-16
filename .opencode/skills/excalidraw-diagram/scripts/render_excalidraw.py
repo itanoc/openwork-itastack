@@ -92,7 +92,7 @@ def render(
         print("  uv: cd .opencode/skills/excalidraw-diagram/scripts && uv sync && uv run playwright install chromium", file=sys.stderr)
         print("  python macOS/Linux: cd .opencode/skills/excalidraw-diagram/scripts && python3 -m venv .venv && . .venv/bin/activate && python -m pip install playwright && python -m playwright install chromium", file=sys.stderr)
         print(r"  python Windows PowerShell: cd .opencode\skills\excalidraw-diagram\scripts; py -m venv .venv; .\.venv\Scripts\Activate.ps1; python -m pip install playwright; python -m playwright install chromium", file=sys.stderr)
-        print("If Python is unavailable, skip PNG and use the zero-install HTML preview.", file=sys.stderr)
+        print("If Python is unavailable, skip PNG and use the standalone HTML preview.", file=sys.stderr)
         sys.exit(1)
 
     try:
@@ -135,7 +135,7 @@ def render(
                 print("  uv: cd .opencode/skills/excalidraw-diagram/scripts && uv run playwright install chromium", file=sys.stderr)
                 print("  python macOS/Linux: cd .opencode/skills/excalidraw-diagram/scripts && . .venv/bin/activate && python -m playwright install chromium", file=sys.stderr)
                 print(r"  python Windows PowerShell: cd .opencode\skills\excalidraw-diagram\scripts; .\.venv\Scripts\Activate.ps1; python -m playwright install chromium", file=sys.stderr)
-                print("If Python is unavailable, skip PNG and use the zero-install HTML preview.", file=sys.stderr)
+                print("If Python is unavailable, skip PNG and use the standalone HTML preview.", file=sys.stderr)
                 sys.exit(1)
             raise
 

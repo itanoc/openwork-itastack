@@ -26,6 +26,7 @@
 
   <script>
     const SCENE_FILE = "SCENE_FILE.excalidraw";
+    const SCENE_DATA = SCENE_DATA_PLACEHOLDER;
     document.getElementById("source-name").textContent = SCENE_FILE;
     const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -124,17 +125,13 @@
       document.getElementById("root").replaceChildren(svg);
     }
 
-    fetch(SCENE_FILE)
-      .then((response) => {
-        if (!response.ok) throw new Error(`Could not load ${SCENE_FILE}: ${response.status}`);
-        return response.json();
-      })
-      .then(renderDiagram)
-      .catch((error) => {
-        const box = document.getElementById("error");
-        box.style.display = "block";
-        box.textContent = `${error.message}. If opened with file://, use OpenWork preview or open the .excalidraw file manually in Excalidraw.`;
-      });
+    try {
+      renderDiagram(SCENE_DATA);
+    } catch (error) {
+      const box = document.getElementById("error");
+      box.style.display = "block";
+      box.textContent = `${error.message}. Open the .excalidraw file manually in Excalidraw if fallback preview cannot render it.`;
+    }
   </script>
 </body>
 </html>
