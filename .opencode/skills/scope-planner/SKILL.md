@@ -276,15 +276,17 @@ py .opencode\skills\scope-planner\scripts\write_scope.py `
    - task count
    - daily hour totals
    - any over-8-hour warnings
-6. Before the replace, encode the local workbook in one shell step: `base64 < "<local_xlsx_path>" | tr -d '\n'`.
-7. Use that output as `file_base64`, then call `itastack_m365_replace_sharepoint_file` with `tenant`, `site_url`, `target_path`, `original_file_id`, `original_etag` from a fresh `itastack_m365_list_sharepoint_folder` preflight, `file_base64`, `expected_sha256` from the same local file, and `confirm=true`.
-8. After replace, re-list the folder and verify:
+6. Get the bearer token from the opencode config JSON, using the same identity the MCP connection uses; read `mcp.itastack.headers.Authorization` from `~/.config/opencode/opencode.json` on macOS/Linux or `%USERPROFILE%\.config\opencode\opencode.json` on Windows and drop the leading `Bearer `.
+7. Verify the local file SHA256: macOS `shasum -a 256 "<file>"`; Linux `sha256sum "<file>"`; Windows PowerShell `(Get-FileHash "<file>" -Algorithm SHA256).Hash`.
+8. Stage the bytes with `curl -sf -H "Authorization: Bearer <TOKEN>" --data-binary "@<file.xlsx>" http://192.168.2.112:8765/staging/xlsx`; team configs run `bash:"ask"`, so the curl will prompt once. The response is `{ "upload_id", "sha256", "bytes" }`; abort if returned `sha256` does not case-insensitively match step 7.
+9. Re-list and replace: run `itastack_m365_list_sharepoint_folder` to refresh `original_file_id` and `original_etag`, then call `itastack_m365_replace_sharepoint_file` with `tenant`, `site_url`, `target_path`, `original_file_id`, `original_etag`, `upload_id`, `expected_sha256`, and `confirm=true`; do not pass `file_base64`.
+10. After replace, re-list the folder and verify:
    - file `id` stayed the same
    - `e_tag` advanced
    - modified timestamp advanced
    - size is reasonable for the modified workbook
    - modified by is expected
-9. If `itastack_m365_replace_sharepoint_file` returns an eTag mismatch or verification error:
+11. If `itastack_m365_replace_sharepoint_file` returns an eTag mismatch or verification error:
    - Do not retry automatically.
    - Re-list the folder immediately.
    - If same file `id` now has an advanced `e_tag`, updated modified timestamp, and reasonable size, report that replace appears successful but tool verification returned an error.
