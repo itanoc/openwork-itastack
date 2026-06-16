@@ -3,15 +3,31 @@
 <!-- Evolution: 2026-03-18 | source: ep-2026-03-18-scope-planner-live-test | skill: scope-planner -->
 <!-- Updated from WHCS Phone System Expansion live test to reflect actual ITA deployment practices -->
 
-This baseline covers deploying or migrating a 3CX phone system hosted on
-**AWS LightSail**, including server provisioning, SIP trunk configuration,
-phone provisioning, and multi-site linking. Adapt to the specific client environment.
+This baseline covers deploying or migrating a 3CX phone system hosted in the
+cloud, including server provisioning, backup restore or fresh configuration,
+SIP trunk configuration, phone registration support, and multi-site linking.
+Use the lean migration paths when an existing 3CX backup has already been
+analyzed. Adapt to the specific client environment.
 
 **Common scenarios:**
 - **Greenfield**: New 3CX system for a client with no existing phone system
-- **Migration**: Migrate existing on-prem 3CX to cloud-hosted AWS LightSail
+- **Migration**: Migrate existing on-prem or self-hosted 3CX to cloud-hosted 3CX
+- **Lean cloud migration from analyzed backup**: Backup/config already reviewed; collapse discovery and prioritize restore, cutover, phone registration support, validation, monitoring, and acceptance
+- **Phased provider port/switch**: Move 3CX hosting first; coordinate SIP provider port/readiness separately; configure/cut over new provider only after the carrier confirms port readiness
 - **Expansion**: Add a second (or third) site to an existing 3CX system
 - **Hybrid**: Migration + Expansion (e.g., move to cloud AND add a new site)
+
+## Scenario Selection Rules
+
+Use these rules before building the day-by-day plan:
+
+- If a clean 3CX backup has already been received and analyzed, do **not** create a discovery-heavy Day 1. Treat the backup review as pre-work already complete and keep the migration scope lean.
+- If the client is changing SIP providers and numbers must port to the new provider first, split provider work into two phases:
+  1. **Provider coordination / porting readiness** — collect DID list, LOA/CSR/account/authorized contact details, SMS/caller ID/E911 requirements, and submit or validate the port request.
+  2. **Provider cutover** — configure the new trunk/routes only after the new provider confirms port readiness or completion.
+- Cloud migration and SIP provider migration do not have to happen in the same cutover window. Prefer cloud migration first, then provider switch after port readiness, unless the technician explicitly chooses a combined cutover.
+- Do not assume onsite work is required for cloud migration. If phones can register by remote reprovisioning/reboot and the client has a local POC, schedule ITA remote assist and client/local actions instead.
+- When local device actions are required, split responsibility clearly: ITA performs cloud/PBX work remotely; client or named local POC reboots phones, checks physical cabling, and reports device behavior.
 
 ## Pre-Work (Remote)
 
@@ -29,6 +45,21 @@ phone provisioning, and multi-site linking. Adapt to the specific client environ
 - Review backup to understand current configuration (extensions, DIDs, routes, ring groups)
 - Identify SIP provider and trunk credentials from backup
 - ⚠️ DEPENDENCY: Do not proceed with LightSail deployment until backup is received and reviewed
+
+### If Migration from Already-Analyzed Backup
+- Confirm the backup artifact/review source and date; do not repeat full discovery unless the review is stale or incomplete
+- Confirm target cloud hosting method, target FQDN, license handling, restore method, and whether the backup includes license/FQDN
+- Confirm whether the existing SIP provider will remain in place for initial cloud cutover or whether provider migration is in scope later
+- Confirm client/local POC availability for phone reboot/registration support during the cutover window
+- Keep pre-work limited to assumptions, blockers, access, and rollback path; most environment discovery should already be complete
+
+### If SIP Provider Port / Provider Switch Is In Scope
+- Document all numbers: main line, DIDs, toll-free, fax, SMS-enabled numbers, and E911 addresses
+- Confirm current carrier, target carrier, account number, billing telephone number, service address, authorized signer/contact, CSR availability, and LOA requirements
+- Confirm whether SMS, caller ID/CNAM, E911, fax/T.38, and toll-free services must move with the numbers
+- ⚠️ DEPENDENCY: Numbers often cannot be configured or tested on the new provider trunk until the provider confirms port readiness/completion
+- ⚠️ DEPENDENCY: Incorrect LOA/CSR/account details can reject the port and reset the timeline
+- Preserve the existing SIP provider until all numbers and critical call flows are confirmed on the new provider
 
 ### If Greenfield / New Setup
 - Inventory current phone system if replacing (provider, phone count, extensions, DIDs)
@@ -52,7 +83,72 @@ phone provisioning, and multi-site linking. Adapt to the specific client environ
 - If MAC addresses are available, phones can be **pre-configured in 3CX console** before on-site visit
 - ⚠️ GOTCHA: Certificate issues can occur when provisioning remote Yealink phones — ensure 3CX uses standard certs the phones support by default
 
-## Day 1 — AWS LightSail Deployment & 3CX Setup (Remote)
+## Lean Scenario — Cloud Migration from Already-Analyzed Backup (Remote)
+
+Use this scenario when the backup/config has already been reviewed and the goal is to move 3CX hosting to cloud with minimal rediscovery. Typical shape: **Day 1 — 6.5hrs max**.
+
+### Day 1 — Cloud Provision, Restore, Cutover & Validation
+- Confirm final target cloud/FQDN/license assumptions, access, maintenance window, client/local POC availability, and rollback trigger
+- Create/provision the target cloud 3CX instance using the approved hosting method
+- Restore the already-analyzed backup and verify expected restored objects:
+  - extensions/users
+  - groups/queues/ring groups
+  - IVR/auto-attendant
+  - business hours/holiday schedules
+  - inbound/outbound rules
+  - existing SIP trunk settings if provider remains unchanged for this phase
+- Validate DNS/FQDN, certificate, firewall/security settings, and admin access
+- Perform cloud cutover during the approved window; mark downtime only for call-flow/device registration impact
+- Assist client/local POC remotely with phone registrations/reboots and spot-check devices
+- Test key call flows: inbound main number, representative DIDs, outbound, internal extension dialing, voicemail/email, queue/ring group, paging/intercom if used, and emergency/SMS/fax where applicable
+- Configure or verify backup schedule, basic monitoring/alerting, and acceptance notes
+- Document final cloud state and unresolved follow-ups
+
+### Lean cloud migration task-hour guidance
+- Assumption/access/window confirmation: 0.5 hr
+- Cloud instance provision/setup: 1.0 hr
+- Backup restore and restored-config validation: 1.5 hr
+- DNS/FQDN/cert/security/cutover prep: 0.75 hr
+- Cutover execution and phone registration/reboot assist: 1.25 hr
+- Call-flow/device validation: 1.0 hr
+- Backup/monitoring/documentation/acceptance: 0.5 hr
+- Total target: 6.5 hrs max; increase only for stale backup review, many sites/devices, missing access, or combined provider cutover
+
+### Scope-plan field guidance for lean migrations
+- **Location**: use `remote` for ITA PBX/cloud work, `client` for local phone reboot/physical checks by the client POC, and `vendor` for SIP provider coordination
+- **Downtime**: mark `Yes` for the cloud cutover and provider cutover windows when inbound/outbound calling or phone registration may be impacted; most prep, restore validation, and documentation tasks are `No`
+- **After-hours**: mark `Yes` only when the approved cutover/testing window is outside business hours
+- **Client dependencies**: client POC availability, phone reboot/local checks, acceptance testing, and timely approval of maintenance window/rollback criteria
+- **Vendor dependencies**: target cloud/license access if externally owned; SIP provider port readiness/FOC, trunk credentials, E911/SMS/fax provisioning, and support availability during provider cutover
+- **Parts**: usually none for cloud-only migrations unless phones, router phones/SBCs, PoE switches, or UPS hardware are being added
+- **Comments**: note that backup analysis was already completed, old provider remains active until provider switch validation passes, and onsite work is intentionally excluded when a local POC handles device actions
+
+## Phased Scenario — Cloud First, Provider Port/Switch Second (Remote)
+
+Use this scenario when the cloud migration can proceed before a SIP provider change, but the new provider requires number porting/readiness before trunk cutover. Do not combine these phases unless the technician explicitly approves the added risk.
+
+### Day 1 — Cloud Migration from Existing Backup (6.5hrs max)
+- Follow the lean cloud migration day above
+- Keep the existing SIP provider active if provider port/readiness is not complete
+- Document provider-switch prerequisites as follow-up dependencies, not blockers for cloud hosting migration unless current trunk credentials will not work in cloud
+
+### Day 2 — Provider Port Coordination / Readiness (2.5hrs max)
+- Confirm final DID inventory and which services move: voice, SMS, fax, toll-free, caller ID/CNAM, E911
+- Collect or validate LOA, CSR, current carrier account details, authorized signer/contact, service address, BTN, and losing-carrier requirements
+- Submit the port request or validate an already-submitted request with the target provider
+- Confirm target provider provisioning prerequisites, expected FOC/port date, test-number options, and cutover support path
+- Communicate waiting period, readiness blockers, and who owns each open item
+- Do **not** configure final production trunk cutover tasks until provider confirms port readiness/completion
+
+### Day 3 — New SIP Provider Trunk Cutover (4hrs max)
+- ⚠️ DEPENDENCY: Start only after target provider confirms port readiness/completion or scheduled FOC window
+- Configure target provider trunk credentials, inbound rules, outbound rules, caller ID, emergency routing, and SMS/fax settings if applicable
+- Perform provider cutover in the approved window
+- Validate inbound main number, sample DIDs, outbound caller ID, emergency/E911 policy, SMS/fax if in scope, and failover/rollback behavior
+- Confirm old provider remains active until all ported numbers and critical call flows pass validation
+- Document final provider/trunk/routing state and update acceptance notes
+
+## Standard Scenario — AWS LightSail Deployment & 3CX Setup (Remote)
 
 ### Server Provisioning
 - Deploy 3CX instance on **AWS LightSail via Marketplace** (~30 min process)
@@ -160,6 +256,8 @@ phone provisioning, and multi-site linking. Adapt to the specific client environ
 
 ### If Number Porting Required
 - **⚠️ DEPENDENCY: Port completion date must be confirmed with carrier**
+- For phased provider switches, schedule a separate provider coordination/readiness day before this cutover day; do not treat carrier paperwork and trunk cutover as the same task
+- If the target provider cannot stage numbers before port readiness, keep the old provider active and postpone production trunk/routing changes until the FOC/port window
 - Monitor porting status with carrier
 - Verify numbers appear on SIP trunk after port completes
 - Update inbound routing rules for ported numbers
@@ -202,6 +300,7 @@ phone provisioning, and multi-site linking. Adapt to the specific client environ
 ### Critical
 - **SIP ALG**: DISABLE SIP ALG on the firewall — it breaks 3CX. This causes one-way audio, dropped calls, registration failures.
 - **Number porting**: 5-15 business days; incorrect LOA causes rejection and restarts the process
+- **Provider sequencing**: If changing SIP providers, numbers may need to port to the new provider before production trunk configuration/cutover is possible; split coordination/readiness from cutover
 - **E911**: Must be registered BEFORE go-live — legal requirement
 - **Old carrier**: Donât cancel old carrier account until ALL numbers are confirmed ported
 - **3CX backup for migration**: Without the backup, the entire timeline is blocked
