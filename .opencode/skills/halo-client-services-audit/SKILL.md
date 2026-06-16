@@ -15,7 +15,7 @@ Use this skill to audit HaloPSA ticket volume and logged work for one Halo clien
 
 ## Goal
 
-Produce a Markdown services-value report for one client:
+Produce a Markdown services-value report for one client by Halo client ID or client name:
 
 - tickets per month
 - ticket-type breakdown
@@ -26,15 +26,19 @@ Produce a Markdown services-value report for one client:
 
 ## Inputs
 
-- `client_id`: Halo client ID / `faults.Areaint`, positive integer, for example `244`.
+- `client`: Halo client ID / `faults.Areaint` positive integer, for example `244`, or Halo client name.
 - `lookback_months`: optional integer `1-60`; default `12` when blank or invalid.
 - If the user provides only one number, treat it as `client_id` and use default `lookback_months = 12`.
+- If the user provides text that is not a positive integer, treat it as a client name and resolve it before running audit queries.
 
 ## Tool
 
-Use only this OpenWork ITAStack tool:
+Use only these OpenWork ITAStack tools:
 
+- `itastack_halo_search_clients`
 - `itastack_grafana_query_halo_sql`
+
+Use `itastack_halo_search_clients` only for client-name resolution. Use `itastack_grafana_query_halo_sql` for all audit queries.
 
 Tool call shape:
 
@@ -47,7 +51,9 @@ Tool call shape:
 
 ## Execution Policy
 
-- TOOL-FIRST: first substantive action must be `itastack_grafana_query_halo_sql` identity query from workflow step 2.
+- TOOL-FIRST:
+  - If the user provides a numeric client ID, first substantive action must be `itastack_grafana_query_halo_sql` identity query from workflow step 3.
+  - If the user provides a client name, first substantive action must be `itastack_halo_search_clients` client-name lookup from workflow step 2.
 - Do not summarize without data.
 - If `itastack_grafana_query_halo_sql` is unavailable, say exactly:
   `ITAStack Grafana Halo SQL tool is not available in this OpenWork session.`
@@ -58,7 +64,7 @@ Tool call shape:
 
 - If `lookback_months` is blank or non-numeric, default to `12`. State assumption.
 - Clamp `lookback_months` to integer range `1-60`.
-- Treat `client_id` as Halo `faults.Areaint`.
+- Treat resolved `client_id` as Halo `faults.Areaint`.
 - Halo datetimes are UTC. Group by UTC calendar month. Do not convert timezone.
 - Window is rolling `N` months using `DATEADD(month, -<N>, GETUTCDATE())`; monthly rows may span `N + 1` calendar buckets because the first and current months can be partial.
 - Monthly trend buckets run from the UTC month containing the rolling start date through the UTC month containing the end date.
@@ -120,12 +126,36 @@ Tool call shape:
 ## Workflow
 
 1. Validate inputs:
-   - `client_id` is positive integer.
+   - `client` is either a positive integer or non-empty client-name text.
    - `lookback_months` is integer `1-60`; default `12` if invalid.
    - If only one number is provided, treat it as `client_id` and assume `lookback_months = 12`.
    - Report window as: `from <UTC start date> to <UTC end date> (last N months)`.
 
-2. Confirm client identity. First tool call:
+2. Resolve client name when needed:
+
+   If `client` is not a positive integer, call `itastack_halo_search_clients`:
+
+   ```json
+   {
+     "search": "<client name>",
+     "count": 10
+   }
+   ```
+
+   Selection rules:
+
+   - If zero matches, stop:
+
+     ```text
+     client name '<name>' not found in HaloPSA clients
+     ```
+
+   - If exactly one clear match exists, use that match's Halo client ID as `client_id`.
+   - A clear match is an exact case-insensitive name match, or a single returned client whose name plainly matches the user's input with only punctuation, suffix, or abbreviation differences.
+   - If multiple possible matches exist, ask the user to choose before running audit queries. Show only client names and IDs needed for selection.
+   - Do not guess between similar client names.
+
+3. Confirm client identity. First SQL tool call for numeric-input flow, or first SQL tool call after name resolution:
 
    ```sql
    SELECT TOP 2
@@ -149,7 +179,7 @@ Tool call shape:
    client_id <n> resolved to multiple HaloPSA area rows
    ```
 
-3. Totals roll-up:
+4. Totals roll-up:
 
    ```sql
    SELECT TOP 1
@@ -162,7 +192,7 @@ Tool call shape:
 
    Use `limit: 1`.
 
-4. Tickets per month:
+5. Tickets per month:
 
    ```sql
    SELECT TOP 100
@@ -179,7 +209,7 @@ Tool call shape:
 
    Use `limit: 100`.
 
-5. Ticket type breakdown:
+6. Ticket type breakdown:
 
    ```sql
    SELECT TOP 50
@@ -197,7 +227,7 @@ Tool call shape:
 
    Use `limit: 50`.
 
-6. Source breakdown:
+7. Source breakdown:
 
    ```sql
    SELECT TOP 20
@@ -213,7 +243,7 @@ Tool call shape:
 
    Use `limit: 20`.
 
-7. Top categories:
+8. Top categories:
 
    ```sql
    SELECT TOP 20
@@ -229,7 +259,7 @@ Tool call shape:
 
    Use `limit: 20`.
 
-8. Hours logged per month:
+9. Hours logged per month:
 
    ```sql
    SELECT TOP 100
@@ -250,7 +280,7 @@ Tool call shape:
 
    Use `limit: 100`.
 
-9. Compute from returned data only:
+10. Compute from returned data only:
    - `tickets/month = total_window / N` using the rolling `N`-month denominator.
    - `tickets/week = total_window / (N * 4.345)`
    - `hours/month = SUM(hours_logged) / N` using the rolling `N`-month denominator.
@@ -261,7 +291,7 @@ Tool call shape:
      - human = `total_window - alerts`
    - Use `total_alltime`, `first_ticket`, and `last_ticket` in the header context line; do not leave roll-up fields unused.
 
-10. Build zero-filled monthly trend:
+11. Build zero-filled monthly trend:
     - Include every calendar month from the UTC month containing the rolling start date through the UTC month containing the end date.
     - If no tickets or hours for a month, show `0`.
     - Expect a rolling `N`-month window to sometimes show `N + 1` rows because start and end months may both be partial.
