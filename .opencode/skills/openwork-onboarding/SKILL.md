@@ -29,7 +29,7 @@ This onboarding starts by capturing the teammate's basic work identity so future
 - Do not install workstation tools, packages, CLIs, or dependencies without explicit approval. Explain purpose, likely admin prompts, and consequences of skipping before asking.
 - If Claude Code is not installed, continue silently.
 - If Claude Code is installed, ask before changing anything related to Claude Code, Claude Code skills, or shared skill paths.
-- Use harmless demo files under `onboarding/` in the current workspace.
+- Use harmless demo files under `.onboarding/` in the current workspace.
 - Use public browser checks only unless the user explicitly asks for an internal app check.
 - Keep examples dynamic. Do not assume any specific MCP server, ticket system, or customer tool exists.
 
@@ -37,17 +37,17 @@ This onboarding starts by capturing the teammate's basic work identity so future
 
 Create or update:
 
-- `onboarding/openwork-demo.txt` — simple file creation/editing demo.
-- `onboarding/openwork-onboarding-report.md` — run log and results.
-- Optionally `onboarding/example-report.md` — sample report generated from available read-only MCP/extension data.
-- Optionally `onboarding/package-check.xlsx` — proof that the local Python reporting bundle can create Excel workbooks.
+- `.onboarding/openwork-demo.txt` — simple file creation/editing demo.
+- `.onboarding/openwork-onboarding-report.md` — run log and results.
+- Optionally `.onboarding/example-report.md` — sample report generated from available read-only MCP/extension data.
+- Optionally `.onboarding/package-check.xlsx` — proof that the local Python reporting bundle can create Excel workbooks.
 - `AGENTS.md` — update near the top with the confirmed onboarded teammate profile, unless the user declines.
 
 If OpenWork shows a skill reload banner after this skill is installed or updated, reload skills before running onboarding.
 
 ## Required permissions
 
-- Workspace write access for `onboarding/`.
+- Workspace write access for `.onboarding/`.
 - Built-in browser access for `https://example.com`.
 - Shell access for OS and Claude Code detection.
 - Optional: shell access for checking Python, uv, Git, Node.js/npm, OS package managers, and local reporting packages.
@@ -65,7 +65,7 @@ Before explaining checks, detecting OS, creating files, opening browser, or disc
 
 Record each check result immediately after it runs. Do not wait until the end and reconstruct from memory.
 
-Use this shape in working notes and then write it into `onboarding/openwork-onboarding-report.md`:
+Use this shape in working notes and then write it into `.onboarding/openwork-onboarding-report.md`:
 
 ```text
 check: <name>
@@ -93,7 +93,7 @@ Use this checkpoint format:
 Required checkpoints:
 
 - After the browser window opens, before capturing the browser snapshot.
-- After `onboarding/example-report.md` is created and opened or manual-open instructions are given.
+- After `.onboarding/example-report.md` is created and opened or manual-open instructions are given.
 
 ### 1. Capture teammate profile and update AGENTS.md
 
@@ -149,7 +149,7 @@ Capture teammate identity before running the technical checks. This is a require
 10. If the user declines, do not write profile data to `AGENTS.md`; record the skip in the onboarding report.
 11. If `AGENTS.md` cannot be written, stop and explain the workspace permissions problem before continuing.
 
-Record profile capture in `onboarding/openwork-onboarding-report.md`:
+Record profile capture in `.onboarding/openwork-onboarding-report.md`:
 
 - first and last name provided
 - Halo lookup result: matched / multiple candidates / not found / unavailable
@@ -175,13 +175,13 @@ Preferred shell commands:
 - macOS/Linux: `uname -s`
 - Windows PowerShell: `$PSVersionTable.PSVersion; [System.Environment]::OSVersion.VersionString`
 
-Record detected OS in `onboarding/openwork-onboarding-report.md`.
+Record detected OS in `.onboarding/openwork-onboarding-report.md`.
 
 ### 4. Check file create/edit access
 
 Create directory and file:
 
-`onboarding/openwork-demo.txt`
+`.onboarding/openwork-demo.txt`
 
 Initial file text:
 
@@ -208,14 +208,14 @@ If write fails:
 
 ### 5. Demonstrate file editor
 
-Open or direct user to `onboarding/openwork-demo.txt`.
+Open or direct user to `.onboarding/openwork-demo.txt`.
 
 Preferred behavior:
 
 1. Call `openwork_ui_list_actions` first.
 2. Use an exact editor/open-file action only if the returned action list contains one.
 3. Do not invent OpenWork UI action IDs.
-4. If no action exists, tell user: “Open `onboarding/openwork-demo.txt` from workspace file tree. You should see the created and edited text.”
+4. If no action exists, tell user: “Open `.onboarding/openwork-demo.txt` from workspace file tree. You should see the created and edited text.”
 
 Record editor demo status in report:
 
@@ -332,7 +332,7 @@ If read-only MCP/extension actions are available, offer a safe demo:
 1. Ask user which available data source to use.
 2. Ask for a harmless query, such as one ticket ID, one document name, or a small recent-results limit.
 3. Call only read-only actions.
-4. Save concise result to `onboarding/example-report.md`.
+4. Save concise result to `.onboarding/example-report.md`.
 
 Do not call actions whose names or descriptions imply mutation during onboarding, including:
 
@@ -353,17 +353,17 @@ Exception: user explicitly switches from onboarding demo into a real task and co
 
 If ticket/helpdesk tools are available, example prompt:
 
-> Pull ticket `<ticket-id>`, summarize status, requester, recent notes, and next action, then save it to `onboarding/example-report.md`.
+> Pull ticket `<ticket-id>`, summarize status, requester, recent notes, and next action, then save it to `.onboarding/example-report.md`.
 
 If document/search tools are available, example prompt:
 
-> Search for `<topic>`, summarize the top results, and save source links plus next steps to `onboarding/example-report.md`.
+> Search for `<topic>`, summarize the top results, and save source links plus next steps to `.onboarding/example-report.md`.
 
 If email/calendar tools are available, example prompt:
 
-> Find recent messages matching `<subject or sender>`, summarize what happened, and save it to `onboarding/example-report.md`.
+> Find recent messages matching `<subject or sender>`, summarize what happened, and save it to `.onboarding/example-report.md`.
 
-If no tools are available, create a template-only `onboarding/example-report.md` showing how the flow will look once extensions are connected:
+If no tools are available, create a template-only `.onboarding/example-report.md` showing how the flow will look once extensions are connected:
 
 ```markdown
 # Example MCP Report
@@ -385,11 +385,11 @@ Pull a ticket, document, email thread, or system record with a read-only MCP too
 - Source references
 ```
 
-After `onboarding/example-report.md` is created, open it or direct the user to it using the same safe UI-action pattern from the file editor demo. Do not open another onboarding document as the document example.
+After `.onboarding/example-report.md` is created, open it or direct the user to it using the same safe UI-action pattern from the file editor demo. Do not open another onboarding document as the document example.
 
 Stop here and check in with the user:
 
-> You should now see `onboarding/example-report.md`. This shows how OpenWork can pull read-only tool data or a template into a saved workspace report. Any questions before I continue to the final onboarding report?
+> You should now see `.onboarding/example-report.md`. This shows how OpenWork can pull read-only tool data or a template into a saved workspace report. Any questions before I continue to the final onboarding report?
 
 Wait for the user to continue before writing the final onboarding report.
 
@@ -417,7 +417,7 @@ Ask one targeted question before checking tools:
 
 > I can check for Python, uv, Git, Node.js/npm, and OS-specific package tools. These help OpenWork create Excel files, process reports, run repeatable checks, and avoid future interruptions. Do you want me to run the readiness check now?
 
-If the user declines, record the skip in `onboarding/openwork-onboarding-report.md` and continue. Do not pressure them beyond one concise explanation of consequences.
+If the user declines, record the skip in `.onboarding/openwork-onboarding-report.md` and continue. Do not pressure them beyond one concise explanation of consequences.
 
 #### Tool checks by OS
 
@@ -548,40 +548,40 @@ Ask before installing:
 Do not install the bundle globally with `pip install ...` by default. Prefer a workspace-managed environment for proof during onboarding:
 
 ```bash
-uv venv onboarding/.venv
-uv pip install --python onboarding/.venv/bin/python openpyxl xlsxwriter pandas python-docx python-pptx pypdf pillow matplotlib requests beautifulsoup4 lxml pyyaml jinja2 rich
+uv venv .onboarding/.venv
+uv pip install --python .onboarding/.venv/bin/python openpyxl xlsxwriter pandas python-docx python-pptx pypdf pillow matplotlib requests beautifulsoup4 lxml pyyaml jinja2 rich
 ```
 
 On Windows, the venv Python path is typically:
 
 ```powershell
-onboarding\.venv\Scripts\python.exe
+.onboarding\.venv\Scripts\python.exe
 ```
 
 Windows local venv install example:
 
 ```powershell
-uv venv onboarding\.venv
-uv pip install --python onboarding\.venv\Scripts\python.exe openpyxl xlsxwriter pandas python-docx python-pptx pypdf pillow matplotlib requests beautifulsoup4 lxml pyyaml jinja2 rich
+uv venv .onboarding\.venv
+uv pip install --python .onboarding\.venv\Scripts\python.exe openpyxl xlsxwriter pandas python-docx python-pptx pypdf pillow matplotlib requests beautifulsoup4 lxml pyyaml jinja2 rich
 ```
 
 After installation, run an import proof using the venv Python. Use the correct Python path for the OS:
 
 ```bash
-onboarding/.venv/bin/python -c "import openpyxl, xlsxwriter, pandas, docx, pptx, pypdf, PIL, matplotlib, requests, bs4, lxml, yaml, jinja2, rich; print('ok')"
+.onboarding/.venv/bin/python -c "import openpyxl, xlsxwriter, pandas, docx, pptx, pypdf, PIL, matplotlib, requests, bs4, lxml, yaml, jinja2, rich; print('ok')"
 ```
 
 Windows import proof:
 
 ```powershell
-onboarding\.venv\Scripts\python.exe -c "import openpyxl, xlsxwriter, pandas, docx, pptx, pypdf, PIL, matplotlib, requests, bs4, lxml, yaml, jinja2, rich; print('ok')"
+.onboarding\.venv\Scripts\python.exe -c "import openpyxl, xlsxwriter, pandas, docx, pptx, pypdf, PIL, matplotlib, requests, bs4, lxml, yaml, jinja2, rich; print('ok')"
 ```
 
-Create `onboarding/package-check.xlsx` with `openpyxl` to prove Excel creation works. The workbook should contain a simple sheet named `Package Check` with rows for package, purpose, and status. Keep it harmless and non-client-specific.
+Create `.onboarding/package-check.xlsx` with `openpyxl` to prove Excel creation works. The workbook should contain a simple sheet named `Package Check` with rows for package, purpose, and status. Keep it harmless and non-client-specific.
 
 If any package fails to install or import, record the failure and continue unless the user wants to troubleshoot. Do not let optional package setup block core onboarding.
 
-Record in `onboarding/openwork-onboarding-report.md`:
+Record in `.onboarding/openwork-onboarding-report.md`:
 
 - Tool checks run or skipped.
 - Python, uv, Git, Node.js/npm status.
@@ -592,11 +592,11 @@ Record in `onboarding/openwork-onboarding-report.md`:
 - PATH precedence issues discovered after install.
 - Whether installs were approved, completed, failed, or skipped.
 - Python reporting bundle status: installed, partially installed, failed, or skipped.
-- `onboarding/package-check.xlsx` creation status when attempted.
+- `.onboarding/package-check.xlsx` creation status when attempted.
 
 ### 11. Write final onboarding report
 
-Create or update `onboarding/openwork-onboarding-report.md` with:
+Create or update `.onboarding/openwork-onboarding-report.md` with:
 
 ```markdown
 # OpenWork Onboarding Report
@@ -671,7 +671,7 @@ End with concise next steps:
 - Mention whether browser automation passed.
 - Mention whether Claude Code was detected only if detected or if report includes it.
 - Mention whether workstation readiness was checked, skipped, or needs follow-up.
-- Mention `onboarding/package-check.xlsx` if the Python reporting bundle proof file was created.
+- Mention `.onboarding/package-check.xlsx` if the Python reporting bundle proof file was created.
 - Mention how to add extensions: Settings > Extensions.
 - Mention how to manage folders: Settings > Permissions.
 - Ask whether the user wants to keep or delete demo files. Default: keep them as proof of onboarding.
@@ -684,7 +684,7 @@ End with concise next steps:
 
 ## Verification checklist for agent using this skill
 
-- [ ] Created/edited `onboarding/openwork-demo.txt` or explained permission blocker.
+- [ ] Created/edited `.onboarding/openwork-demo.txt` or explained permission blocker.
 - [ ] Asked for first and last name.
 - [ ] Looked up HaloPSA agent details when the tool was available.
 - [ ] Asked before writing teammate profile data to `AGENTS.md`.
@@ -694,12 +694,12 @@ End with concise next steps:
 - [ ] Claude Code detection handled per OS.
 - [ ] No Claude Code blocking/config edits performed without explicit confirmation.
 - [ ] MCP/extension example stayed dynamic.
-- [ ] Created and opened or directed user to `onboarding/example-report.md` as the one document example.
+- [ ] Created and opened or directed user to `.onboarding/example-report.md` as the one document example.
 - [ ] Stopped after example report opened and checked for questions.
 - [ ] Asked before running the optional workstation readiness check.
 - [ ] Checked Python, uv, Git, Node.js/npm, and OS package manager using OS-appropriate commands, or recorded skip.
 - [ ] Explained why each missing tool matters before asking to install it.
 - [ ] Did not install tools, packages, CLIs, or dependencies without explicit approval.
 - [ ] Installed the Python reporting bundle only in a local environment by default, or recorded skip/failure.
-- [ ] Verified Python reporting packages by importing them and creating `onboarding/package-check.xlsx`, or recorded why verification was skipped.
-- [ ] Wrote `onboarding/openwork-onboarding-report.md`.
+- [ ] Verified Python reporting packages by importing them and creating `.onboarding/package-check.xlsx`, or recorded why verification was skipped.
+- [ ] Wrote `.onboarding/openwork-onboarding-report.md`.

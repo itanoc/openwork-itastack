@@ -54,6 +54,9 @@ prototypes/
 # Local handoff documents
 /.handoff/
 
+# Local OpenWork onboarding artifacts
+/.onboarding/
+
 # Local public-safe GitHub issue drafts
 .issues/*
 !.issues/.gitkeep
