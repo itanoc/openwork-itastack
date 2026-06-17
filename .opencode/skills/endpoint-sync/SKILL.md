@@ -1,6 +1,6 @@
 ---
 name: endpoint-sync
-description: Use for quiet regular OpenWork configuration update checks and automatic endpoint-safe sync that backs up Git-visible working-tree drift while preserving ignored local-only data.
+description: Use for quiet regular OpenWork configuration update checks and automatic endpoint-safe sync that merges shared updates while preserving endpoint-local OpenWork configuration changes.
 ---
 
 # Endpoint Sync
@@ -13,27 +13,47 @@ Also use this skill when repository sync guidance says to run the endpoint-safe 
 
 Keep centrally maintained OpenWork configuration current on endpoints without asking non-technical users to choose Git strategies.
 
-Central OpenWork configuration wins for tracked/shared files during sync, but recoverable Git-visible working-tree drift must be backed up before tracked central updates are applied.
+Shared OpenWork configuration updates are merged with endpoint-local OpenWork configuration changes. Routine endpoint sync must not overwrite endpoint-local work.
 
-Endpoint sync is not a workspace cleanup routine. It runs only when upstream central OpenWork configuration updates are available. Its job is to apply tracked central configuration updates safely, not to remove user-created local files or make `git status` clean.
+Endpoint sync is not a workspace cleanup routine. It runs only when upstream shared OpenWork configuration updates are available. Its job is to apply shared updates safely, not to remove user-created local files or make `git status` clean.
 
 ## Definitions
 
-- Git-visible working-tree drift: tracked working-tree or index changes, deleted tracked files, staged locally added files, and untracked non-ignored files.
+- Endpoint-local OpenWork configuration changes: uncommitted changes under the allowlisted OpenWork configuration paths below.
+- Local commits: commits on the endpoint branch that are ahead of the configured upstream.
 - Ignored local-only data: files ignored by `.gitignore` or local exclude rules, including personal memory, artifacts, local config, logs, prototypes, and other endpoint-only data.
-- Backup root: `artifacts/git-sync-backups/YYYY-MM-DD-HHMM/` using local time.
+- Allowlisted OpenWork configuration paths for endpoint auto-save:
+  - `AGENTS.md`
+  - `.opencode/skills/**`
+  - `.opencode/agents/**`
+  - `.opencode/plugins/**`
+  - `.opencode/workflows/**`
+  - `.opencode/commands/**`
+- Private/local excluded paths that must never be staged or committed by endpoint sync:
+  - `opencode.jsonc`
+  - `.env*`
+  - `memory/**`
+  - `artifacts/**`
+  - `.handoff/**`
+  - `.onboarding/**`
+  - `.issues/**`
+  - `youtube/**`
+  - `prototypes/**`
+  - `teaching/**`
 
 ## Hard safety rules
 
 - Preserve ignored local-only data in place.
 - Never use `git clean -fdx`.
-- Do not commit, push, branch, create PRs, merge, rebase, or stash during endpoint sync handling.
-- Do not ask non-technical users to choose between commit, stash, merge, rebase, or skip.
+- Never push, branch, create PRs, rebase, stash, reset hard, or clean during endpoint sync handling.
+- Never use broad staging such as `git add .`.
+- Never stage or commit ignored/private files, secrets, logs, client data, or generated artifacts.
+- Do not ask non-technical users to choose between commit, stash, merge, rebase, reset, or skip.
 - If a command fails or repository setup is missing, stop and report the failure plainly.
 - Keep clean/no-action checks silent when possible.
-- Do not create backups when no upstream central updates are available.
-- Do not remove untracked files as cleanup. Preserve untracked files in place unless a central tracked path cannot be applied because that exact untracked path obstructs it.
-- Never include `artifacts/git-sync-backups/` in drift lists, verification failures, or cleanup decisions.
+- Do not create local commits when no upstream shared updates are available.
+- Do not remove untracked files as cleanup. Preserve untracked files in place.
+- If local and shared changes conflict, stop and report that maintainer review is needed. Do not auto-resolve conflicts.
 
 ## Quiet update check
 
@@ -41,8 +61,8 @@ Endpoint sync is not a workspace cleanup routine. It runs only when upstream cen
 2. Inspect current state: `git status --short --branch`.
 3. Get ahead/behind counts: `git rev-list --left-right --count HEAD...@{upstream}`.
 4. Interpret output as `<ahead> <behind>`.
-5. If `behind = 0`, no action is needed; create no backup and stay silent unless the user explicitly asked for status.
-6. If `behind > 0`, run the endpoint-safe sync procedure below, even when `ahead > 0`. Local ahead commits are not backed up as patches or bundles during routine endpoint sync.
+5. If `behind = 0`, no action is needed; create no local commit and stay silent unless the user explicitly asked for status.
+6. If `behind > 0`, run the endpoint-safe sync procedure below, even when `ahead > 0`.
 
 ## Endpoint-safe sync procedure
 
@@ -54,11 +74,11 @@ Run these checks:
 - `git rev-parse --show-toplevel`
 - `git rev-parse --abbrev-ref --symbolic-full-name @{upstream}`
 
-If any check fails, stop. User-facing wording: `OpenWork configuration could not be updated automatically. Ask James to refresh this setup.`
+If any check fails, stop. User-facing wording: `OpenWork configuration could not be updated automatically. Ask workspace maintainer to refresh this setup.`
 
 ### 2. Capture status before changing anything
 
-Capture these values for the manifest:
+Capture these values for troubleshooting if sync fails:
 
 - Current timestamp in local time as `YYYY-MM-DD-HHMM`.
 - Repository root from `git rev-parse --show-toplevel`.
@@ -69,56 +89,53 @@ Capture these values for the manifest:
 - Ahead/behind from `git rev-list --left-right --count HEAD...@{upstream}`.
 - Full short status from `git status --short --branch`.
 
-### 3. Build the drift list
+### 3. Inspect uncommitted changes
 
-Use `git status --porcelain=v1 -z` to identify every Git-visible working-tree drift path. Use NUL-safe parsing so paths with spaces, quotes, renames, copies, or unusual characters are handled safely.
+Use `git status --porcelain=v1 -z` to identify uncommitted tracked/index changes. Use NUL-safe parsing so paths with spaces, quotes, renames, copies, or unusual characters are handled safely.
 
-- Tracked drift: every tracked porcelain entry other than `??`, including modified, deleted, renamed, copied, type-changed, mode-changed, staged, and locally added paths.
-- Deleted tracked files: tracked drift where the working-tree path is deleted.
-- Locally added tracked files: tracked/index-added paths that are not present in pre-sync `HEAD`.
-- Untracked non-ignored files: `??` entries.
-- Rename/copy entries: handle as two-path records and preserve the relevant current working-tree path when present.
+Classify changed paths:
 
-Do not include ignored files. Do not include `artifacts/git-sync-backups/`. Do not use commands that remove ignored files.
+- Allowed OpenWork config changes: tracked or index changes where every affected path is in the allowlisted OpenWork configuration paths and not in an excluded path.
+- Excluded/private changes: any changed path under excluded/private paths, any ignored file, any secret-like path, logs, client data, or generated artifacts.
+- Other changes: any changed path outside both lists.
+- Untracked files: leave in place. Do not stage them unless they are under an allowlisted OpenWork configuration path and clearly part of a user-created OpenWork config item.
 
-### 4. Create backup folder if drift exists
+If no uncommitted changes exist, continue to pull.
 
-If there is any Git-visible working-tree drift, create `artifacts/git-sync-backups/YYYY-MM-DD-HHMM/`.
+If uncommitted changes exist only in allowed OpenWork config paths, save them before pull:
 
-Inside the backup folder:
+1. Stage only the allowed paths explicitly. Do not use `git add .`.
+2. Commit with message: `Local endpoint OpenWork changes`.
 
-- Preserve relative paths for every backed-up file.
-- Create `manifest.md` with the captured repository state and a table of backed-up paths.
-- For tracked drift paths that exist in the working tree, copy the working-tree file into the same relative path under the backup folder. If a path is both modified and staged, preserve the working-tree file content, not the index blob.
-- For deleted tracked files present in pre-sync `HEAD`, restore the pre-sync `HEAD` version into the same relative path under the backup folder and mark the path as `locally deleted tracked` in `manifest.md`.
-- For locally added tracked files not present in pre-sync `HEAD` but present in the working tree, copy the working-tree file and mark it as `locally added tracked`.
-- If a locally added tracked file exists only in the index and not in the working tree, stop before applying the central update.
-- For untracked non-ignored files or directories, copy the file or directory into the same relative path under the backup folder and mark it as `untracked preserved`. Leave the original in place by default.
+If excluded/private changes or other changes exist:
 
-If a path cannot be backed up, stop before applying the central update. User-facing wording: `OpenWork configuration could not be updated automatically. Ask James to refresh this setup.`
+1. Do not stage or commit them.
+2. Continue only if they do not prevent pull.
+3. If the pull refuses to proceed because of those local changes, stop and report maintainer review is needed.
 
-Immediately before applying the central update, run `git status --porcelain=v1 -z` again. If the Git-visible working-tree drift list changed, update the backup and manifest before continuing. If backup update fails, stop before applying the central update.
+If the working tree changes while inspecting or staging, re-read `git status --porcelain=v1 -z` before committing. If classification is no longer clear, stop before pulling.
 
-### 5. Apply tracked central configuration
+### 4. Pull shared updates
 
-After successful backup and pre-reset recheck, align tracked files with upstream while preserving ignored local-only data and non-conflicting untracked files.
+Recalculate ahead/behind after any local auto-save commit:
 
-Allowed internal actions after backup:
+- `git rev-list --left-right --count HEAD...@{upstream}`
 
-- Reset tracked files to the upstream commit.
-- If reset fails because an untracked file or directory path obstructs an upstream tracked file, use the reset/checkout error output to identify the exact obstructing path. If and only if that exact path was already backed up, update `manifest.md` to mark it as `untracked overwritten by central path`, remove only that exact obstruction, and retry reset once.
+If behind is now `0`, no shared update remains; stop silently unless the user explicitly asked for status.
 
-Never remove ignored files or directories. Never remove unrelated untracked files. Never use `git clean -fdx`.
+If behind is greater than `0` and ahead is `0`, use:
 
-The simplest safe shape is:
+- `git pull --ff-only`
 
-1. Use `git reset --hard @{upstream}` to align tracked files with upstream.
-2. If reset succeeds, leave untracked files in place.
-3. If reset fails because of an untracked obstruction, update `manifest.md`, remove only the exact backed-up obstructing file or directory path, and retry reset once.
+If behind is greater than `0` and ahead is greater than `0`, use:
 
-If the reset or one-time obstruction retry fails, stop and report failure. Do not keep trying destructive alternatives.
+- `git pull --no-rebase`
 
-### 6. Verify result
+If pull fails because of local changes, conflicts, unrelated histories, authentication, or repository setup, stop. Do not retry with reset, rebase, stash, clean, or force options.
+
+If merge conflicts occur, stop and report: `OpenWork configuration update needs maintainer review because local and shared changes conflict.`
+
+### 5. Verify result
 
 Run:
 
@@ -128,10 +145,12 @@ Run:
 
 Success criteria:
 
-- Ahead and behind counts are `0 0` after an applied update.
-- No tracked or index porcelain entries remain in `git status --porcelain=v1 -z`; all remaining entries, if any, must be `??` untracked entries.
-- `??` untracked entries may remain; a successful endpoint sync does not require a clean working tree.
-- Any untracked path removed because it obstructed an upstream tracked path was included in the backup and marked as `untracked overwritten by central path` in the manifest.
+- Behind count is `0` after an applied update.
+- Ahead count may be `0` or greater depending on endpoint-local commits and merge commits.
+- No merge-conflict porcelain entries remain.
+- No excluded/private paths were staged or committed by endpoint sync.
+- Untracked and ignored local-only data remain untouched.
+- A successful endpoint sync does not require a clean working tree if unrelated local files remain.
 - Ignored local-only data remains untouched.
 
 ## User-facing reports
@@ -139,26 +158,9 @@ Success criteria:
 Use only these concise reports unless troubleshooting details are needed:
 
 - No action needed: stay silent.
-- Updated without backups: `OpenWork configuration has been updated.`
-- Updated with backups: `OpenWork configuration has been updated. Backups of local changes are located here: artifacts/git-sync-backups/YYYY-MM-DD-HHMM/`
-- Failure: `OpenWork configuration could not be updated automatically. Ask James to refresh this setup.`
+- Updated cleanly: `OpenWork configuration has been updated.`
+- Updated with preserved local changes: `OpenWork configuration has been updated. Local endpoint changes were preserved.`
+- Conflict or unsafe local state: `OpenWork configuration update needs maintainer review because local and shared changes conflict.`
+- Failure: `OpenWork configuration could not be updated automatically. Ask workspace maintainer to refresh this setup.`
 
 Avoid Git/GitHub wording in user-facing sync reports unless troubleshooting requires it.
-
-## Manifest requirements
-
-Write `manifest.md` in plain Markdown. Include:
-
-- Timestamp.
-- Repository root.
-- Branch.
-- Local `HEAD` before sync.
-- Upstream name and commit.
-- Ahead/behind counts before sync.
-- Original `git status --short --branch` output.
-- Backup table with columns: `Path`, `Status`, `Backup note`.
-- Use these statuses where applicable: `modified tracked`, `locally deleted tracked`, `locally added tracked`, `untracked preserved`, `untracked overwritten by central path`.
-- A note that ignored local-only data was intentionally not copied or removed.
-- A note that preserved untracked files may remain in the workspace after successful sync.
-
-Do not auto-prune backup folders.

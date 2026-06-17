@@ -171,13 +171,39 @@ Use `git fetch --prune --quiet`, then `git status --short --branch`, then `git r
 
 Stay silent when no action is needed.
 
-If updates are available, automatically use the endpoint-safe sync procedure. OpenWork configuration wins, but all Git-visible working-tree drift must be backed up first under `artifacts/git-sync-backups/<timestamp>/`.
+If updates are available, automatically use the endpoint-safe sync procedure. Shared OpenWork configuration updates are merged with endpoint-local OpenWork configuration changes. Do not overwrite endpoint-local work during routine sync.
 
 Ignored local-only data must be preserved in place.
 
 Report only when updates are applied, sync cannot complete, the check fails, or repository setup is missing. Avoid Git/GitHub wording in user-facing update messages unless troubleshooting requires it.
 
-Do not ask non-technical users to choose Git strategies. Do not commit, push, branch, create PRs, merge, rebase, or stash during endpoint sync handling.
+Do not ask non-technical users to choose Git strategies. Do not push, branch, create PRs, rebase, stash, reset hard, or clean during endpoint sync handling.
+
+When shared updates are available and endpoint-local uncommitted changes touch only allowlisted OpenWork configuration paths, save those changes with a local commit before pulling so normal merge behavior can preserve them. Stage only allowlisted paths; never use broad staging such as `git add .`.
+
+Allowlisted OpenWork configuration paths for endpoint auto-save:
+
+- `AGENTS.md`
+- `.opencode/skills/**`
+- `.opencode/agents/**`
+- `.opencode/plugins/**`
+- `.opencode/workflows/**`
+- `.opencode/commands/**`
+
+Never auto-save, stage, or commit private/local paths, ignored files, secrets, logs, client data, or generated artifacts, including:
+
+- `opencode.jsonc`
+- `.env*`
+- `memory/**`
+- `artifacts/**`
+- `.handoff/**`
+- `.onboarding/**`
+- `.issues/**`
+- `youtube/**`
+- `prototypes/**`
+- `teaching/**`
+
+Use fast-forward pull when there are no local commits to preserve. Use merge pull when endpoint-local commits exist. Never rebase. If local and shared changes conflict, stop and report that maintainer review is needed; do not auto-resolve conflicts.
 
 Use the `endpoint-sync` skill or equivalent documented procedure for implementation details.
 
