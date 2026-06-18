@@ -28,7 +28,7 @@ Produce a concise Markdown report from HaloPSA data using read-only OpenWork ITA
 
 Use only read-only Halo SQL:
 
-- `itastack_grafana_query_halo_sql`
+- `itastack_itastack_grafana` operation `query_halo_sql`
 
 Do not call Halo write tools. Do not mutate tickets, budgets, appointments, clients, or actions.
 

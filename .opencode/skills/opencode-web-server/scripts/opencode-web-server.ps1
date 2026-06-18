@@ -5,6 +5,8 @@ param(
     [int]$Port = 4096,
     [switch]$Lan,
     [switch]$LocalOnly,
+    [switch]$PreventSleep,
+    [switch]$NoPreventSleep,
     [string]$HostName = ''
 )
 
@@ -14,10 +16,16 @@ $Workspace = (Get-Location).Path
 $RuntimeDir = Join-Path $Workspace '.opencode\runtime\opencode-web-server'
 $PidFile = Join-Path $RuntimeDir 'server.pid'
 $LogFile = Join-Path $RuntimeDir 'server.log'
+$ErrLogFile = Join-Path $RuntimeDir 'server-err.log'
 $UrlFile = Join-Path $RuntimeDir 'server.url'
+$AwakePidFile = Join-Path $RuntimeDir 'keep-awake.pid'
+$AwakeScriptFile = Join-Path $RuntimeDir 'keep-awake.ps1'
 
 if ([string]::IsNullOrWhiteSpace($HostName)) {
     if ($LocalOnly) { $HostName = '127.0.0.1' } else { $HostName = '0.0.0.0' }
+}
+if ($PreventSleep -and $NoPreventSleep) {
+    throw 'Use only one of -PreventSleep or -NoPreventSleep.'
 }
 
 function Ensure-Runtime {
@@ -122,6 +130,91 @@ function Test-OpenCodeProcess([int]$ProcessId) {
     }
 }
 
+function Test-ProcessRunning([int]$ProcessId) {
+    try {
+        Get-Process -Id $ProcessId -ErrorAction Stop | Out-Null
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Read-KeepAwakePreference {
+    if ($PreventSleep) { return $true }
+    if ($NoPreventSleep) { return $false }
+    if (-not [Environment]::UserInteractive) { return $false }
+    $answer = Read-Host 'Prevent system sleep while OpenCode web server runs? [y/N]'
+    return ($answer -match '^(?i:y|yes)$')
+}
+
+function Test-KeepAwakeProcess([int]$ProcessId) {
+    try {
+        $proc = Get-CimInstance Win32_Process -Filter "ProcessId = $ProcessId" -ErrorAction Stop
+        if (-not $proc) { return $false }
+        return (($proc.Name -match '^(powershell|pwsh)(\.exe)?$') -and ($proc.CommandLine -like "*$AwakeScriptFile*"))
+    } catch {
+        return $false
+    }
+}
+
+function Start-KeepAwake {
+    Ensure-Runtime
+    if (Test-Path $AwakePidFile) {
+        $existingPidText = (Get-Content $AwakePidFile -Raw).Trim()
+        if ($existingPidText -match '^\d+$' -and (Test-KeepAwakeProcess ([int]$existingPidText))) {
+            Write-Output "Sleep prevention already enabled with helper PID $existingPidText."
+            return $false
+        }
+        Remove-Item -Force -ErrorAction SilentlyContinue $AwakePidFile
+    }
+
+    $keepAwakeScript = @'
+Add-Type -Namespace Kernel32 -Name NativeMethods -MemberDefinition @"
+[System.Runtime.InteropServices.DllImport("kernel32.dll")]
+public static extern uint SetThreadExecutionState(uint esFlags);
+"@
+$ES_CONTINUOUS = 0x80000000
+$ES_SYSTEM_REQUIRED = 0x00000001
+[Kernel32.NativeMethods]::SetThreadExecutionState($ES_CONTINUOUS -bor $ES_SYSTEM_REQUIRED) | Out-Null
+try {
+    while ($true) {
+        Start-Sleep -Seconds 30
+        [Kernel32.NativeMethods]::SetThreadExecutionState($ES_CONTINUOUS -bor $ES_SYSTEM_REQUIRED) | Out-Null
+    }
+} finally {
+    [Kernel32.NativeMethods]::SetThreadExecutionState($ES_CONTINUOUS) | Out-Null
+}
+'@
+    Set-Content -Path $AwakeScriptFile -Value $keepAwakeScript
+    $psExe = if (Get-Command powershell.exe -ErrorAction SilentlyContinue) { 'powershell.exe' } elseif (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { 'powershell' }
+    $proc = Start-Process -FilePath $psExe -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $AwakeScriptFile) -WindowStyle Hidden -PassThru
+    Set-Content -Path $AwakePidFile -Value $proc.Id
+    Start-Sleep -Seconds 1
+    if (-not (Test-KeepAwakeProcess $proc.Id)) {
+        Remove-Item -Force -ErrorAction SilentlyContinue $AwakePidFile
+        Write-Output 'Sleep prevention requested, but helper did not stay running. Continuing without sleep prevention.'
+        return
+    }
+    Write-Output "Sleep prevention enabled with helper PID $($proc.Id)."
+}
+
+function Stop-KeepAwake {
+    if (-not (Test-Path $AwakePidFile)) { return }
+    $awakePidText = (Get-Content $AwakePidFile -Raw).Trim()
+    if ($awakePidText -notmatch '^\d+$') {
+        Remove-Item -Force -ErrorAction SilentlyContinue $AwakePidFile
+        return
+    }
+    $awakePid = [int]$awakePidText
+    if (Test-KeepAwakeProcess $awakePid) {
+        Stop-Process -Id $awakePid
+        Write-Output "Sleep prevention stopped. Helper PID: $awakePid"
+    } elseif (Test-ProcessRunning $awakePid) {
+        Write-Output "Sleep prevention helper PID $awakePid no longer looks like this script-owned helper. Leaving process untouched."
+    }
+    Remove-Item -Force -ErrorAction SilentlyContinue $AwakePidFile
+}
+
 function Get-LanIp {
     if (-not (Get-Command Get-NetIPAddress -ErrorAction SilentlyContinue)) {
         return ''
@@ -135,13 +228,8 @@ function Get-LanIp {
 function Test-SessionApi {
     $encoded = [System.Uri]::EscapeDataString($Workspace)
     $url = "http://127.0.0.1:$Port/session?directory=$encoded&roots=true&limit=5"
-    $headers = @{}
-    if ($env:OPENCODE_SERVER_USERNAME -and $env:OPENCODE_SERVER_PASSWORD) {
-        $bytes = [System.Text.Encoding]::UTF8.GetBytes("$($env:OPENCODE_SERVER_USERNAME):$($env:OPENCODE_SERVER_PASSWORD)")
-        $headers['Authorization'] = 'Basic ' + [Convert]::ToBase64String($bytes)
-    }
     try {
-        Invoke-WebRequest -Uri $url -Headers $headers -TimeoutSec 10 -UseBasicParsing | Out-Null
+        Invoke-WebRequest -Uri $url -TimeoutSec 10 -UseBasicParsing | Out-Null
         return $true
     } catch {
         return $false
@@ -169,6 +257,13 @@ function Show-Status {
     }
     if (Test-Path $UrlFile) {
         Write-Output "URL: $(Get-Content $UrlFile -Raw)"
+    }
+    if (Test-Path $AwakePidFile) {
+        $awakePidText = (Get-Content $AwakePidFile -Raw).Trim()
+        $awakeState = if ($awakePidText -match '^\d+$' -and (Test-KeepAwakeProcess ([int]$awakePidText))) { 'running' } else { 'stale' }
+        Write-Output "Sleep prevention: $awakePidText ($awakeState)"
+    } else {
+        Write-Output 'Sleep prevention: none'
     }
     if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
         Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue | Format-Table -AutoSize | Out-String | Write-Output
@@ -202,26 +297,44 @@ function Start-Server {
         throw 'Port already in use'
     }
 
-    $args = @('web', $Workspace, '--hostname', $HostName, '--port', [string]$Port)
-    $proc = Start-Process -FilePath 'opencode' -ArgumentList $args -RedirectStandardOutput $LogFile -RedirectStandardError $LogFile -PassThru -WindowStyle Hidden
+    $keepAwakeStarted = $false
+    if (Read-KeepAwakePreference) {
+        $hadKeepAwake = Test-Path $AwakePidFile
+        Start-KeepAwake
+        $keepAwakeStarted = (-not $hadKeepAwake) -and (Test-Path $AwakePidFile)
+    }
+
+    $args = @('web', '--hostname', $HostName, '--port', [string]$Port)
+    $savedUser = $env:OPENCODE_SERVER_USERNAME
+    $savedPassword = $env:OPENCODE_SERVER_PASSWORD
+    Remove-Item Env:OPENCODE_SERVER_USERNAME -ErrorAction SilentlyContinue
+    Remove-Item Env:OPENCODE_SERVER_PASSWORD -ErrorAction SilentlyContinue
+    try {
+        $proc = Start-Process -FilePath 'opencode' -ArgumentList $args -RedirectStandardOutput $LogFile -RedirectStandardError $ErrLogFile -PassThru -WindowStyle Hidden
+    } finally {
+        if ($null -eq $savedUser) { Remove-Item Env:OPENCODE_SERVER_USERNAME -ErrorAction SilentlyContinue } else { $env:OPENCODE_SERVER_USERNAME = $savedUser }
+        if ($null -eq $savedPassword) { Remove-Item Env:OPENCODE_SERVER_PASSWORD -ErrorAction SilentlyContinue } else { $env:OPENCODE_SERVER_PASSWORD = $savedPassword }
+    }
     Set-Content -Path $PidFile -Value $proc.Id
     Start-Sleep -Seconds 2
     if (-not (Test-OpenCodeProcess $proc.Id)) {
-        throw "OpenCode web server failed to stay running. Log: $LogFile"
+        if ($keepAwakeStarted) { Stop-KeepAwake }
+        throw "OpenCode web server failed to stay running. Logs: $LogFile $ErrLogFile"
     }
 
     $ip = Get-LanIp
     if (-not $LocalOnly -and $ip) { $url = "http://$ip`:$Port" } else { $url = "http://127.0.0.1:$Port" }
     Set-Content -Path $UrlFile -Value $url
 
-    if (Test-SessionApi) { Write-Output 'Session API: ok' } else { Write-Output 'Session API: not verified. Check auth or server log.' }
-    Write-Output "OpenCode web server started. Local: http://127.0.0.1:$Port LAN: $url PID: $($proc.Id) Log: $LogFile"
+    if (Test-SessionApi) { Write-Output 'Session API: ok' } else { Write-Output 'Session API: not verified. Check server logs.' }
+    Write-Output "OpenCode web server started. Local: http://127.0.0.1:$Port LAN: $url PID: $($proc.Id) Logs: $LogFile $ErrLogFile"
 }
 
 function Stop-Server {
     Ensure-Runtime
     if (-not (Test-Path $PidFile)) {
         Write-Output 'No saved PID file. Nothing stopped.'
+        Stop-KeepAwake
         Show-Status
         return
     }
@@ -229,6 +342,7 @@ function Stop-Server {
     if (-not (Test-OpenCodeProcess $pidValue)) {
         Write-Output "Saved PID $pidValue is not a running opencode process. Removing stale state."
         Remove-Item -Force -ErrorAction SilentlyContinue $PidFile, $UrlFile
+        Stop-KeepAwake
         return
     }
     Stop-Process -Id $pidValue
@@ -237,7 +351,8 @@ function Stop-Server {
         throw "Process $pidValue still running after graceful stop. Refusing force kill without confirmation."
     }
     Remove-Item -Force -ErrorAction SilentlyContinue $PidFile, $UrlFile
-    Write-Output "OpenCode web server stopped. Log preserved: $LogFile"
+    Stop-KeepAwake
+    Write-Output "OpenCode web server stopped. Logs preserved: $LogFile $ErrLogFile"
 }
 
 switch ($Command) {

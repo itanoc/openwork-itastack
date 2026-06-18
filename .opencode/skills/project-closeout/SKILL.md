@@ -38,18 +38,21 @@ If templates are not directly accessible through OpenWork tools, ask user for lo
 
 Read tools:
 
-- `itastack_halo_get_ticket` for HaloPSA ticket context.
-- `itastack_halo_list_ticket_actions` when full action history is needed.
-- `itastack_m365_list_sharepoint_folder` when SharePoint folder browsing is available.
-- `itastack_m365_search_sharepoint` when SharePoint search is available.
+- `itastack_itastack_halo` operation `get_ticket` for HaloPSA ticket context.
+- `itastack_itastack_halo` operation `actions.list` when full action history is needed.
+- `itastack_itastack_m365` operation `list_sharepoint_folder` when SharePoint folder browsing is available.
+- `itastack_itastack_m365` operation `search_sharepoint_files` when SharePoint search is available.
+- `itastack_itastack_m365` operation `replace_sharepoint_file` for approved replacement of an existing SharePoint file.
 - Local file tools for reading/writing copied templates.
+
+For Microsoft 365 calls, pass tenant as top-level dispatcher field, not inside `params`.
 
 Capability gaps:
 
-- Current OpenWork ITAStack Microsoft 365 toolset may not expose SharePoint download/upload.
+- Current OpenWork ITAStack Microsoft 365 toolset can replace existing SharePoint files with `file_base64` or a staged `upload_id`, but may not expose create-new upload.
 - Current local file tools may not preserve complex Office formatting without helper scripts or libraries.
 - If download/upload/template editing is unavailable, state gap, create best available local artifacts only after user approves, and give exact paths.
-- Do not claim upload completed unless an upload-capable tool exists and succeeds.
+- Do not claim upload completed unless `replace_sharepoint_file` or another upload-capable tool succeeds and post-upload verification passes.
 
 Extension fallback:
 
@@ -79,13 +82,13 @@ Extension fallback:
 
 1. If Ticket ID missing, ask for Ticket ID and stop.
 2. If SharePoint destination missing, ask for SharePoint destination path/URL and stop.
-3. Pull HaloPSA ticket with `itastack_halo_get_ticket`:
+3. Pull HaloPSA ticket with `itastack_itastack_halo` operation `get_ticket`:
    - `ticket_id`: provided Ticket ID
    - `include_actions`: `true`
    - `slim`: `false`
    - `max_note_chars`: `8000`
    - `max_actions`: `10`
-4. Pull more actions with `itastack_halo_list_ticket_actions` only if ticket action history is missing or too thin.
+4. Pull more actions with `itastack_itastack_halo` operation `actions.list` only if ticket action history is missing or too thin.
 5. Resolve Client and Project Name from ticket context.
 6. Confirm naming if ambiguous.
 

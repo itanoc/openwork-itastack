@@ -26,8 +26,8 @@ Find the latest transcribed 3CX call for the target person in ITA 3CX. Create a 
 ## Allowed Tools
 
 - Read workspace-root `AGENTS.md` only when `your_name` is blank.
-- `itastack_threecx_search_extension`
-- `itastack_threecx_list_call_history`
+- `itastack_itastack_threecx` operation `extensions.search`
+- `itastack_itastack_threecx` operation `calls.list`
 
 ## Target Person
 
@@ -46,6 +46,7 @@ Who should I search for in ITA 3CX?
 
 - Always use tenant `ita`.
 - Ignore any user-provided tenant unless they explicitly ask to modify this skill.
+- Call `itastack_itastack_threecx` with top-level `tenant: "ita"`, operation, and `params`.
 
 ## Workflow
 

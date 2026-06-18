@@ -71,33 +71,35 @@ Use for 3CX and related infrastructure issues, including:
 
 Use these read-only tools when the tenant is known:
 
-- `itastack_threecx_get_system_status`
-- `itastack_threecx_get_system_health`
-- `itastack_threecx_get_services`
-- `itastack_threecx_get_firewall_status`
-- `itastack_threecx_list_trunks`
-- `itastack_threecx_get_trunk`
-- `itastack_threecx_list_dids`
-- `itastack_threecx_list_inbound_rules`
-- `itastack_threecx_get_inbound_rule`
-- `itastack_threecx_get_outbound_rules`
-- `itastack_threecx_list_queues`
-- `itastack_threecx_get_queue`
-- `itastack_threecx_get_queue_by_number`
-- `itastack_threecx_list_ring_groups`
-- `itastack_threecx_get_ring_group`
-- `itastack_threecx_get_ring_group_by_number`
-- `itastack_threecx_search_extension`
-- `itastack_threecx_list_activity_logs`
-- `itastack_threecx_list_call_history`
-- `itastack_threecx_diagnose_number_formatting`
+- `itastack_itastack_threecx` operation `diagnostics.get_system_status`
+- `itastack_itastack_threecx` operation `diagnostics.get_system_health`
+- `itastack_itastack_threecx` operation `diagnostics.get_services`
+- `itastack_itastack_threecx` operation `diagnostics.get_firewall_status`
+- `itastack_itastack_threecx` operation `trunks.list`
+- `itastack_itastack_threecx` operation `trunks.get`
+- `itastack_itastack_threecx` operation `dids.list`
+- `itastack_itastack_threecx` operation `inbound_rules.list`
+- `itastack_itastack_threecx` operation `inbound_rules.get`
+- `itastack_itastack_threecx` operation `diagnostics.get_outbound_rules`
+- `itastack_itastack_threecx` operation `queues.list`
+- `itastack_itastack_threecx` operation `queues.get`
+- `itastack_itastack_threecx` operation `queues.get_by_number`
+- `itastack_itastack_threecx` operation `ring_groups.list`
+- `itastack_itastack_threecx` operation `ring_groups.get`
+- `itastack_itastack_threecx` operation `ring_groups.get_by_number`
+- `itastack_itastack_threecx` operation `extensions.search`
+- `itastack_itastack_threecx` operation `logs.list`
+- `itastack_itastack_threecx` operation `calls.list`
+- `itastack_itastack_threecx` operation `diagnostics.diagnose_number_formatting`
 - Recording metadata tools only when the issue specifically involves recordings.
+
+Call `itastack_itastack_threecx` with top-level `tenant`, operation, and `params`. Do not put tenant inside `params`.
 
 Use read-only 3CX investigation before recommending console changes.
 
 ### Halo and ITGlue context
 
-- If the issue comes from a Halo ticket, use `itastack_halo_get_ticket` with actions when ticket context is needed.
+- If the issue comes from a Halo ticket, use `itastack_itastack_halo` operation `get_ticket` with actions when ticket context is needed.
 - If client infrastructure documentation is needed, use relevant ITGlue tools to look up the specific client, site, asset, contact, document, or configuration.
 - Do not expose internal-only notes in the client-safe summary.
 

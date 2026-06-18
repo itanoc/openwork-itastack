@@ -46,28 +46,29 @@ Ask for these first:
 Use these OpenWork tools instead of Agent Zero `/a0` paths:
 
 - HaloPSA:
-  - `itastack_halo_get_ticket`
-  - `itastack_halo_list_ticket_actions`
-  - `itastack_halo_search_clients` when client identity is ambiguous
+  - `itastack_itastack_halo` operation `get_ticket`
+  - `itastack_itastack_halo` operation `actions.list`
+  - `itastack_itastack_halo` operation `clients.list` when client identity is ambiguous
 - ITGlue:
-  - `itastack_itglue_search_organizations`
-  - `itastack_itglue_search_configurations`
-  - `itastack_itglue_list_flexible_assets_by_organization`
-  - `itastack_itglue_list_locations`
-  - `itastack_itglue_list_contacts`
-  - `itastack_itglue_search_documents`
+  - `itastack_itastack_itglue` operation `organizations.search`
+  - `itastack_itastack_itglue` operation `configurations.search`
+  - `itastack_itastack_itglue` operation `flexible_assets.list_by_organization`
+  - `itastack_itastack_itglue` operation `locations.list`
+  - `itastack_itastack_itglue` operation `contacts.list`
+  - `itastack_itastack_itglue` operation `documents.search`
 - Microsoft 365 / SharePoint read-only discovery/download:
-  - `itastack_m365_list_sharepoint_folder`
+  - `itastack_itastack_m365` operation `list_sharepoint_folder`
     - Use for folder discovery and file metadata.
     - `folder_path` should be relative to the document library root and usually omit `Shared Documents`.
     - Returned file objects may include `id`, `e_tag`, `web_url`, and temporary `download_url`.
-  - `itastack_m365_search_sharepoint`
+  - `itastack_itastack_m365` operation `search_sharepoint_files`
     - Optional only; it may require additional Graph permissions and can return 403 even when folder listing works.
 - Microsoft 365 / SharePoint write-back:
-  - `itastack_m365_replace_sharepoint_file`
+  - `itastack_itastack_m365` operation `replace_sharepoint_file`
     - Use only to replace an existing `.xlsx` workbook after explicit final approval.
-    - Requires latest file `id`, latest `e_tag`, target path, modified workbook bytes, expected SHA256, and `confirm: true`.
+    - Requires latest file `id`, latest `e_tag`, target path, modified workbook bytes or staged `upload_id`, and expected SHA256.
     - Normal scope-planner write-back uses replace, not upload-new, because the workbook should already exist in SharePoint.
+  - For all Microsoft 365 calls, pass tenant as top-level dispatcher field, not inside `params`.
 - Web research:
   - Prefer `webfetch` for known vendor URLs.
   - Use OpenWork visible browser only after explicit user approval; start with `openwork_browser_open_url`.
@@ -99,16 +100,16 @@ Use these OpenWork tools instead of Agent Zero `/a0` paths:
 
 1. Collect ticket ID and workbook location.
 2. If SharePoint discovery is requested, list the folder with:
-   - `itastack_m365_list_sharepoint_folder` with tenant, site URL, and folder path provided by user or known context.
+   - `itastack_itastack_m365` operation `list_sharepoint_folder` with top-level `tenant`, plus `site_url` and `folder_path` in `params` from user or known context.
    - Use a folder path relative to the document library root, for example `1. Client Notes/...`, not `Shared Documents/1. Client Notes/...`.
    - Prefer folder listing over search when the folder is known.
-   - Use `itastack_m365_search_sharepoint` only as a fallback when filename/query is known but folder is not; search may be denied even when listing works.
+   - Use `itastack_itastack_m365` operation `search_sharepoint_files` only as a fallback when filename/query is known but folder is not; search may be denied even when listing works.
 3. If SharePoint listing returns the file:
    - Confirm name, `id`, `e_tag`, size, modified timestamp, modified by, and web URL.
    - If a `download_url` is present and a local workbook is needed, use it only transiently to download a working copy outside the repo.
    - Never expose or store the `download_url`.
 4. If local workbook path is provided, verify it exists before write-back.
-5. Fetch Halo ticket with `itastack_halo_get_ticket`:
+5. Fetch Halo ticket with `itastack_itastack_halo` operation `get_ticket`:
    - `include_actions`: `true`
    - `slim`: `false`
    - `max_note_chars`: `8000`
@@ -246,7 +247,7 @@ After explicit approval:
 1. Build plan JSON following `references/plan-json-format.md`.
 2. Save JSON under `artifacts/scope-plans/scope_plan_<ticket_id>.json` when useful.
 3. Prepare a local workbook copy from the existing workbook:
-   - Standard path: use `itastack_m365_list_sharepoint_folder` to find the existing copied workbook in the project folder.
+   - Standard path: use `itastack_itastack_m365` operation `list_sharepoint_folder` to find the existing copied workbook in the project folder.
    - Capture source `id`, `e_tag`, name, size, modified timestamp, modified by, and web URL.
    - If user provided a local workbook path, use that path.
    - If SharePoint listing returned a `download_url`, download it to a non-repo temp path such as `/var/folders/mf/82h39t8j28d7ytj59y8_gl8h0000gn/T/opencode/scope-planner/<safe-filename>.xlsx`.
@@ -276,17 +277,17 @@ py .opencode\skills\scope-planner\scripts\write_scope.py `
    - task count
    - daily hour totals
    - any over-8-hour warnings
-6. Get the bearer token from the opencode config JSON, using the same identity the MCP connection uses; read `mcp.itastack.headers.Authorization` from `~/.config/opencode/opencode.json` on macOS/Linux or `%USERPROFILE%\.config\opencode\opencode.json` on Windows and drop the leading `Bearer `.
-7. Verify the local file SHA256: macOS `shasum -a 256 "<file>"`; Linux `sha256sum "<file>"`; Windows PowerShell `(Get-FileHash "<file>" -Algorithm SHA256).Hash`.
-8. Stage the bytes with `curl -sf -H "Authorization: Bearer <TOKEN>" --data-binary "@<file.xlsx>" <MCP_SERVER_URL>/staging/xlsx`; team configs run `bash:"ask"`, so the curl will prompt once. The response is `{ "upload_id", "sha256", "bytes" }`; abort if returned `sha256` does not case-insensitively match step 7.
-9. Re-list and replace: run `itastack_m365_list_sharepoint_folder` to refresh `original_file_id` and `original_etag`, then call `itastack_m365_replace_sharepoint_file` with `tenant`, `site_url`, `target_path`, `original_file_id`, `original_etag`, `upload_id`, `expected_sha256`, and `confirm=true`; do not pass `file_base64`.
+6. Verify the local file SHA256: macOS `shasum -a 256 "<file>"`; Linux `sha256sum "<file>"`; Windows PowerShell `(Get-FileHash "<file>" -Algorithm SHA256).Hash`.
+7. Encode the workbook bytes only when needed for the tool call; do not save base64 in repo files, artifacts, notes, logs, or final response.
+8. Re-list and replace: run `itastack_itastack_m365` operation `list_sharepoint_folder` to refresh `original_file_id` and `original_etag`, then call `itastack_itastack_m365` operation `replace_sharepoint_file` with top-level `tenant` and params containing `site_url`, `target_path`, `original_file_id`, `original_etag`, either `file_base64` or `upload_id`, and `expected_sha256`.
+9. If the workbook is too large for safe `file_base64` transfer and no approved staged `upload_id` is available in the current session, stop and report the local modified workbook path for manual upload or ask the user for an approved staging method. Do not read MCP bearer tokens from config files and do not hand-roll authenticated `curl` uploads.
 10. After replace, re-list the folder and verify:
    - file `id` stayed the same
    - `e_tag` advanced
    - modified timestamp advanced
    - size is reasonable for the modified workbook
    - modified by is expected
-11. If `itastack_m365_replace_sharepoint_file` returns an eTag mismatch or verification error:
+11. If `itastack_itastack_m365` operation `replace_sharepoint_file` returns an eTag mismatch or verification error:
    - Do not retry automatically.
    - Re-list the folder immediately.
    - If same file `id` now has an advanced `e_tag`, updated modified timestamp, and reasonable size, report that replace appears successful but tool verification returned an error.

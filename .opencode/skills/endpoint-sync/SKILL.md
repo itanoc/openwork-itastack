@@ -1,166 +1,212 @@
 ---
 name: endpoint-sync
-description: Use for quiet regular OpenWork configuration update checks and automatic endpoint-safe sync that merges shared updates while preserving endpoint-local OpenWork configuration changes.
+description: Use for quiet regular OpenWork configuration update checks and agent-mediated endpoint-safe sync from the ITAStack MCP config service.
 ---
 
 # Endpoint Sync
 
-Use this skill after 5 or more assistant turns in this OpenWork configuration workspace. Repeat about every 5 assistant turns during longer sessions and before wrapping up meaningful work.
+Use this skill after the first meaningful workspace-specific work in an OpenWork configuration workspace. Repeat about every 5 assistant turns during longer sessions and before wrapping up meaningful work.
 
-Also use this skill when repository sync guidance says to run the endpoint-safe sync procedure.
+Also use this skill when OpenWork configuration sync guidance says to run the endpoint-safe sync procedure.
 
 ## Purpose
 
-Keep centrally maintained OpenWork configuration current on endpoints without asking non-technical users to choose Git strategies.
+Keep centrally maintained OpenWork configuration current on endpoints without requiring GitHub access, repository pull/merge, installed sync scripts, OS schedulers, LaunchAgents, systemd timers, Windows Scheduled Tasks, or background daemons.
 
-Shared OpenWork configuration updates are merged with endpoint-local OpenWork configuration changes. Routine endpoint sync must not overwrite endpoint-local work.
+Routine sync is agent-mediated. The agent checks the ITAStack MCP config service during normal OpenWork sessions, downloads a short-lived bundle only when needed, verifies paths and hashes, applies allowlisted files, writes workspace-local state, and reports safe scalar telemetry.
 
-Endpoint sync is not a workspace cleanup routine. It runs only when upstream shared OpenWork configuration updates are available. Its job is to apply shared updates safely, not to remove user-created local files or make `git status` clean.
+## Tools
+
+Use the ITAStack MCP OpenWork config tools:
+
+- `itastack_openwork_config_get_status`
+- `itastack_openwork_config_get_bundle_url`
+- `itastack_openwork_config_report_result`
+
+Use ephemeral local shell/Python commands only when needed for binary-safe bundle download, tar extraction, SHA256 calculation, or file copying. Do not install persistent helper scripts.
 
 ## Definitions
 
-- Endpoint-local OpenWork configuration changes: uncommitted changes under the allowlisted OpenWork configuration paths below.
-- Local commits: commits on the endpoint branch that are ahead of the configured upstream.
-- Ignored local-only data: files ignored by `.gitignore` or local exclude rules, including personal memory, artifacts, local config, logs, prototypes, and other endpoint-only data.
-- Allowlisted OpenWork configuration paths for endpoint auto-save:
-  - `AGENTS.md`
-  - `.opencode/skills/**`
-  - `.opencode/agents/**`
-  - `.opencode/plugins/**`
-  - `.opencode/workflows/**`
-  - `.opencode/commands/**`
-- Private/local excluded paths that must never be staged or committed by endpoint sync:
-  - `opencode.jsonc`
-  - `.env*`
-  - `memory/**`
-  - `artifacts/**`
-  - `.handoff/**`
-  - `.onboarding/**`
-  - `.issues/**`
-  - `youtube/**`
-  - `prototypes/**`
-  - `teaching/**`
+- Apply root: currently opened OpenWork workspace root, not the user's global OpenCode/OpenWork config directory.
+- Bundle paths are applied into the workspace, for example `<workspace>/.opencode/skills/**` and `<workspace>/AGENTS.md`.
+- State file: `.openwork/state/itastack-config-installed.json` under the apply root.
+- Local drift: after state exists, a current allowed file hash differs from the file hash recorded in the state file for the installed version.
+- Routine sync: add/update files from the server manifest only; do not delete local files absent from the new manifest.
+
+Allowed update paths are only:
+
+- `AGENTS.md`
+- `.opencode/skills/**`
+- `.opencode/agents/**`
+- `.opencode/plugins/**`
+- `.opencode/workflows/**`
+- `.opencode/commands/**`
+- `memory/README.md`
+- `memory/TEMPLATES.md`
+- `memory/*/.gitkeep`
+
+Private/local excluded paths that must never be applied, deleted, overwritten, or used as sync state input:
+
+- `opencode.json`
+- `opencode.jsonc`
+- `.env*`
+- `.openwork/state/**`
+- `memory/**`
+- `artifacts/**`
+- `.handoff/**`
+- `.onboarding/**`
+- `.issues/**`
+- `youtube/**`
+- `prototypes/**`
+- `teaching/**`
+
+Exception: the allowlisted memory scaffold paths `memory/README.md`, `memory/TEMPLATES.md`, and `memory/*/.gitkeep` may be applied. No populated personal memory files may be applied.
 
 ## Hard safety rules
 
+- Use ITAStack MCP config tools, not GitHub or repository pull/merge, for routine endpoint configuration sync.
+- Apply only to the currently opened OpenWork workspace root. Do not apply to `~/.config/opencode`, `%USERPROFILE%\.config\opencode`, or another global user config directory unless that directory is explicitly the opened workspace.
+- Do not upload local files during routine pull/sync.
+- Do not offer to push, publish, upload, or sync local configuration back to the server as part of routine endpoint sync. This skill is pull-only.
+- Do not install scripts, schedulers, LaunchAgents, systemd timers, Scheduled Tasks, or daemons as part of routine sync.
+- Reject any manifest or bundle path outside the allowlist.
+- Reject `opencode.json`, `opencode.jsonc`, absolute paths, path traversal with `..`, backslashes, symlinks, hardlinks, device files, directories as file entries, and non-regular files.
 - Preserve ignored local-only data in place.
-- Never use `git clean -fdx`.
-- Never push, branch, create PRs, rebase, stash, reset hard, or clean during endpoint sync handling.
-- Never use broad staging such as `git add .`.
-- Never stage or commit ignored/private files, secrets, logs, client data, or generated artifacts.
-- Do not ask non-technical users to choose between commit, stash, merge, rebase, reset, or skip.
-- If a command fails or repository setup is missing, stop and report the failure plainly.
-- Keep clean/no-action checks silent when possible.
-- Do not create local commits when no upstream shared updates are available.
-- Do not remove untracked files as cleanup. Preserve untracked files in place.
-- If local and shared changes conflict, stop and report that maintainer review is needed. Do not auto-resolve conflicts.
+- Do not auto-merge local drift.
+- Do not overwrite drifted files during routine sync.
+- Do not automatically delete local files that are absent from the new manifest.
+- Keep no-update checks silent when possible.
+- If MCP status, download, hash verification, path validation, extraction, or apply fails, stop and report failure with safe scalar details only.
 
 ## Quiet update check
 
-1. Refresh remote refs: `git fetch --prune --quiet`.
-2. Inspect current state: `git status --short --branch`.
-3. Get ahead/behind counts: `git rev-list --left-right --count HEAD...@{upstream}`.
-4. Interpret output as `<ahead> <behind>`.
-5. If `behind = 0`, no action is needed; create no local commit and stay silent unless the user explicitly asked for status.
-6. If `behind > 0`, run the endpoint-safe sync procedure below, even when `ahead > 0`.
+1. Confirm the apply root is the currently opened OpenWork workspace root. If the resolved apply root is `~/.config/opencode`, `%USERPROFILE%\.config\opencode`, or another global user config directory, stop unless that directory is explicitly the opened workspace.
+2. Read `.openwork/state/itastack-config-installed.json` from the workspace root if it exists.
+3. Set `current_version` to the state's `version`; use `null` if the state file is missing or unreadable.
+4. Call `itastack_openwork_config_get_status` with:
+   - `current_version`
+   - `channel: "stable"`
+   - `endpoint_id`: a safe endpoint/workspace identifier when available
+   - `openwork_version`: `null` unless known
+5. If `update_available` is false:
+   - Optionally call `itastack_openwork_config_report_result` with `result: "no_update"` when useful for fleet visibility.
+   - Stay silent unless the user explicitly asked for status.
+6. If `update_available` is true, run the endpoint-safe sync procedure below.
 
 ## Endpoint-safe sync procedure
 
-### 1. Confirm repository and upstream
+### 1. Validate status response
 
-Run these checks:
+From the status response, require:
 
-- `git rev-parse --is-inside-work-tree`
-- `git rev-parse --show-toplevel`
-- `git rev-parse --abbrev-ref --symbolic-full-name @{upstream}`
+- `latest_version`
+- `manifest`
+- `bundle_sha256`
+- manifest `files[]` with `path`, `sha256`, `size`, and `mode` where provided
 
-If any check fails, stop. User-facing wording: `OpenWork configuration could not be updated automatically. Ask workspace maintainer to refresh this setup.`
+For every manifest path:
 
-### 2. Capture status before changing anything
+1. Normalize as a POSIX relative path.
+2. Reject if absolute, empty, contains `..`, contains backslashes, or resolves outside the apply root.
+3. Reject if it matches any private/local excluded path, except exact scaffold paths allowed above.
+4. Reject if it is not under the allowed update paths.
+5. Reject if mode is anything other than a normal file mode such as `0644` or `0755`.
+6. Reject if the SHA256 is not a lowercase 64-character hex string.
 
-Capture these values for troubleshooting if sync fails:
+If validation fails, stop and call `itastack_openwork_config_report_result` with:
 
-- Current timestamp in local time as `YYYY-MM-DD-HHMM`.
-- Repository root from `git rev-parse --show-toplevel`.
-- Current branch from `git branch --show-current`.
-- Current `HEAD` from `git rev-parse HEAD`.
-- Upstream name from `git rev-parse --abbrev-ref --symbolic-full-name @{upstream}`.
-- Upstream commit from `git rev-parse @{upstream}` after fetch.
-- Ahead/behind from `git rev-list --left-right --count HEAD...@{upstream}`.
-- Full short status from `git status --short --branch`.
+- `result: "failed"`
+- `error_class`: safe short class such as `manifest_path_invalid`
+- `message`: safe scalar summary only, no local paths beyond allowed relative config paths
 
-### 3. Inspect uncommitted changes
+### 2. Detect local drift when state exists
 
-Use `git status --porcelain=v1 -z` to identify uncommitted tracked/index changes. Use NUL-safe parsing so paths with spaces, quotes, renames, copies, or unusual characters are handled safely.
+If `.openwork/state/itastack-config-installed.json` exists and contains a `file_hashes` map:
 
-Classify changed paths:
+1. For each file path present in both state `file_hashes` and the new manifest, hash the current local file if it exists.
+2. If the current local hash differs from the hash recorded in state, mark that path as drifted.
+3. If any drifted paths exist, stop before download/apply.
+4. Report: `OpenWork configuration update needs maintainer review because local config drift was detected.` Include drifted relative paths only.
+5. Call `itastack_openwork_config_report_result` with `result: "blocked"`, `error_class: "local_drift"`, and a short safe message.
 
-- Allowed OpenWork config changes: tracked or index changes where every affected path is in the allowlisted OpenWork configuration paths and not in an excluded path.
-- Excluded/private changes: any changed path under excluded/private paths, any ignored file, any secret-like path, logs, client data, or generated artifacts.
-- Other changes: any changed path outside both lists.
-- Untracked files: leave in place. Do not stage them unless they are under an allowlisted OpenWork configuration path and clearly part of a user-created OpenWork config item.
+If the state file is missing, treat this as first install. No drift baseline exists; continue only after manifest path validation passes.
 
-If no uncommitted changes exist, continue to pull.
+### 3. Get bundle URL and download to temp
 
-If uncommitted changes exist only in allowed OpenWork config paths, save them before pull:
+1. Call `itastack_openwork_config_get_bundle_url` with:
+   - `version: latest_version`
+   - `channel: "stable"`
+2. Confirm the returned `bundle_sha256` matches the status response `bundle_sha256` when both are present.
+3. Download the bundle URL to a temporary directory outside the workspace when possible.
+4. Do not store the bundle permanently.
+5. Hash the downloaded bundle and require exact match with `bundle_sha256`.
 
-1. Stage only the allowed paths explicitly. Do not use `git add .`.
-2. Commit with message: `Local endpoint OpenWork changes`.
+If download or bundle hash verification fails, stop and report `failed` telemetry with safe scalar error details.
 
-If excluded/private changes or other changes exist:
+### 4. Extract and verify bundle safely
 
-1. Do not stage or commit them.
-2. Continue only if they do not prevent pull.
-3. If the pull refuses to proceed because of those local changes, stop and report maintainer review is needed.
+Extract only into a temporary directory.
 
-If the working tree changes while inspecting or staging, re-read `git status --porcelain=v1 -z` before committing. If classification is no longer clear, stop before pulling.
+For each tar entry:
 
-### 4. Pull shared updates
+1. Reject if path validation fails.
+2. Reject if entry is not a regular file.
+3. Reject symlinks, hardlinks, device files, FIFOs, and special files.
+4. Reject if entry path is absent from the manifest.
+5. Write into the temp extraction directory only.
+6. Hash extracted file and require exact match with manifest file SHA256.
 
-Recalculate ahead/behind after any local auto-save commit:
+After extraction:
 
-- `git rev-list --left-right --count HEAD...@{upstream}`
+- Require every manifest file to exist in the extracted temp tree.
+- Reject extra bundle entries not present in the manifest.
 
-If behind is now `0`, no shared update remains; stop silently unless the user explicitly asked for status.
+### 5. Apply add/update only
 
-If behind is greater than `0` and ahead is `0`, use:
+Before copying each file into the apply root:
 
-- `git pull --ff-only`
+1. Re-check target path remains within the apply root and allowed paths.
+2. If target exists, reject symlink, hardlink, directory, or non-regular target.
+3. Create parent directories only under allowed paths.
+4. Copy verified extracted file over the target.
+5. Set file mode from manifest when provided, limited to regular file modes such as `0644` or `0755`.
 
-If behind is greater than `0` and ahead is greater than `0`, use:
+Do not delete files absent from the manifest.
 
-- `git pull --no-rebase`
+### 6. Write state
 
-If pull fails because of local changes, conflicts, unrelated histories, authentication, or repository setup, stop. Do not retry with reset, rebase, stash, clean, or force options.
+After all files are applied successfully, write `.openwork/state/itastack-config-installed.json` atomically with:
 
-If merge conflicts occur, stop and report: `OpenWork configuration update needs maintainer review because local and shared changes conflict.`
+- `channel`
+- `version`
+- `bundle_sha256`
+- `manifest_sha256` when available
+- `installed_at` as an ISO 8601 timestamp
+- `verification: "mcp-authenticated-sha256"`
+- `file_hashes`: map of applied relative path to manifest SHA256
 
-### 5. Verify result
+Never include secrets, bearer tokens, absolute private filesystem paths, local usernames, or raw MCP headers in state.
 
-Run:
+### 7. Report result
 
-- `git status --short --branch`
-- `git status --porcelain=v1 -z`
-- `git rev-list --left-right --count HEAD...@{upstream}`
+On success, call `itastack_openwork_config_report_result` with:
 
-Success criteria:
+- `version: latest_version`
+- `channel: "stable"`
+- `result: "success"`
+- `message`: short safe scalar such as `applied`
 
-- Behind count is `0` after an applied update.
-- Ahead count may be `0` or greater depending on endpoint-local commits and merge commits.
-- No merge-conflict porcelain entries remain.
-- No excluded/private paths were staged or committed by endpoint sync.
-- Untracked and ignored local-only data remain untouched.
-- A successful endpoint sync does not require a clean working tree if unrelated local files remain.
-- Ignored local-only data remains untouched.
+On blocked local drift, report `blocked`.
+
+On failure, report `failed`.
 
 ## User-facing reports
 
-Use only these concise reports unless troubleshooting details are needed:
+Use only concise reports unless troubleshooting details are needed:
 
-- No action needed: stay silent.
+- No update: stay silent.
 - Updated cleanly: `OpenWork configuration has been updated.`
-- Updated with preserved local changes: `OpenWork configuration has been updated. Local endpoint changes were preserved.`
-- Conflict or unsafe local state: `OpenWork configuration update needs maintainer review because local and shared changes conflict.`
+- Local drift: `OpenWork configuration update needs maintainer review because local config drift was detected.`
 - Failure: `OpenWork configuration could not be updated automatically. Ask workspace maintainer to refresh this setup.`
 
-Avoid Git/GitHub wording in user-facing sync reports unless troubleshooting requires it.
+Avoid Git/GitHub wording in user-facing sync reports unless troubleshooting a separate repository task requires it.

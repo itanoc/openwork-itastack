@@ -39,7 +39,9 @@ workspace="$(pwd)"
 runtime_dir="$workspace/.opencode/runtime/opencode-web-server"
 pid_file="$runtime_dir/server.pid"
 log_file="$runtime_dir/server.log"
+err_log_file="$runtime_dir/server-err.log"
 url_file="$runtime_dir/server.url"
+awake_pid_file="$runtime_dir/keep-awake.pid"
 
 sql_quote() {
   local value="$1"
@@ -149,6 +151,81 @@ pid_running_opencode() {
   ps -p "$pid" -o args= 2>/dev/null | grep -qi 'opencode'
 }
 
+pid_running() {
+  local pid="$1"
+  [[ -n "$pid" ]] || return 1
+  kill -0 "$pid" >/dev/null 2>&1
+}
+
+pid_running_command() {
+  local pid="$1" pattern="$2"
+  [[ -n "$pid" ]] || return 1
+  ps -p "$pid" -o args= 2>/dev/null | grep -qi "$pattern"
+}
+
+ask_keep_awake() {
+  local answer
+  if [[ ! -t 0 ]]; then
+    return 1
+  fi
+  printf 'Prevent system sleep while OpenCode web server runs? [y/N] '
+  read -r answer
+  [[ "$answer" =~ ^[Yy]([Ee][Ss])?$ ]]
+}
+
+start_keep_awake() {
+  ensure_runtime
+  local existing_pid os awake_pid
+  if [[ -f "$awake_pid_file" ]]; then
+    existing_pid="$(cat "$awake_pid_file")"
+    if pid_running_command "$existing_pid" 'caffeinate'; then
+      printf 'Sleep prevention already enabled with helper PID %s.\n' "$existing_pid"
+      return 1
+    elif pid_running "$existing_pid"; then
+      printf 'Sleep prevention helper PID %s no longer looks like this script-owned helper. Leaving process untouched.\n' "$existing_pid" >&2
+    fi
+    rm -f "$awake_pid_file"
+  fi
+
+  os="$(uname -s 2>/dev/null || printf unknown)"
+  case "$os" in
+    Darwin)
+      if ! command -v caffeinate >/dev/null 2>&1; then
+        printf 'Sleep prevention requested, but caffeinate was not found. Continuing without sleep prevention.\n' >&2
+        return 1
+      fi
+      caffeinate -dimsu &
+      awake_pid="$!"
+      printf '%s\n' "$awake_pid" > "$awake_pid_file"
+      sleep 1
+      if ! pid_running_command "$awake_pid" 'caffeinate'; then
+        rm -f "$awake_pid_file"
+        printf 'Sleep prevention requested, but caffeinate did not stay running. Continuing without sleep prevention.\n' >&2
+        return 1
+      fi
+      printf 'Sleep prevention enabled with caffeinate PID %s.\n' "$awake_pid"
+      return 0
+      ;;
+    *)
+      printf 'Sleep prevention requested, but no scoped helper is implemented for this OS. Continuing without sleep prevention.\n' >&2
+      return 1
+      ;;
+  esac
+}
+
+stop_keep_awake() {
+  local awake_pid
+  [[ -f "$awake_pid_file" ]] || return 0
+  awake_pid="$(cat "$awake_pid_file")"
+  if pid_running_command "$awake_pid" 'caffeinate'; then
+    kill "$awake_pid" 2>/dev/null || true
+    printf 'Sleep prevention stopped. Helper PID: %s\n' "$awake_pid"
+  elif pid_running "$awake_pid"; then
+    printf 'Sleep prevention helper PID %s no longer looks like this script-owned helper. Leaving process untouched.\n' "$awake_pid" >&2
+  fi
+  rm -f "$awake_pid_file"
+}
+
 lan_ip() {
   local ip=""
   if command -v ipconfig >/dev/null 2>&1; then
@@ -169,11 +246,7 @@ import sys, urllib.parse
 print(urllib.parse.quote(sys.argv[1], safe=''))
 PY
 )"
-  if [[ -n "${OPENCODE_SERVER_USERNAME:-}" && -n "${OPENCODE_SERVER_PASSWORD:-}" ]]; then
-    curl --max-time 10 -fsS -u "$OPENCODE_SERVER_USERNAME:$OPENCODE_SERVER_PASSWORD" "$base/session?directory=$encoded&roots=true&limit=5" >/dev/null
-  else
-    curl --max-time 10 -fsS "$base/session?directory=$encoded&roots=true&limit=5" >/dev/null
-  fi
+  curl --max-time 10 -fsS "$base/session?directory=$encoded&roots=true&limit=5" >/dev/null
 }
 
 status_cmd() {
@@ -204,6 +277,18 @@ status_cmd() {
     url="$(cat "$url_file")"
     printf 'URL: %s\n' "$url"
   fi
+  if [[ -f "$awake_pid_file" ]]; then
+    local awake_pid awake_state
+    awake_pid="$(cat "$awake_pid_file")"
+    if pid_running_command "$awake_pid" 'caffeinate'; then
+      awake_state="running"
+    else
+      awake_state="stale"
+    fi
+    printf 'Sleep prevention: %s (%s)\n' "$awake_pid" "$awake_state"
+  else
+    printf 'Sleep prevention: none\n'
+  fi
   if command -v lsof >/dev/null 2>&1; then
     lsof -nP -iTCP:"$port" -sTCP:LISTEN || true
   fi
@@ -215,7 +300,7 @@ start_cmd() {
   ensure_runtime
   repair_sessions
 
-  local pid ip url
+  local pid ip url keep_awake_started
   if [[ -f "$pid_file" ]]; then
     pid="$(cat "$pid_file")"
     if pid_running_opencode "$pid"; then
@@ -232,12 +317,22 @@ start_cmd() {
     exit 1
   fi
 
-  nohup opencode web "$workspace" --hostname "$host" --port "$port" > "$log_file" 2>&1 &
+  keep_awake_started="0"
+  if ask_keep_awake; then
+    if start_keep_awake; then
+      keep_awake_started="1"
+    fi
+  fi
+
+  (unset OPENCODE_SERVER_USERNAME OPENCODE_SERVER_PASSWORD; exec opencode web --hostname "$host" --port "$port") > "$log_file" 2> "$err_log_file" &
   pid="$!"
   printf '%s\n' "$pid" > "$pid_file"
   sleep 2
   if ! pid_running_opencode "$pid"; then
-    printf 'OpenCode web server failed to stay running. Log: %s\n' "$log_file" >&2
+    if [[ "$keep_awake_started" == "1" ]]; then
+      stop_keep_awake
+    fi
+    printf 'OpenCode web server failed to stay running. Logs: %s %s\n' "$log_file" "$err_log_file" >&2
     exit 1
   fi
 
@@ -252,15 +347,16 @@ start_cmd() {
   if api_check; then
     printf 'Session API: ok\n'
   else
-    printf 'Session API: not verified. Check auth or server log.\n'
+    printf 'Session API: not verified. Check server logs.\n'
   fi
-  printf 'OpenCode web server started. Local: http://127.0.0.1:%s LAN: %s PID: %s Log: %s\n' "$port" "$url" "$pid" "$log_file"
+  printf 'OpenCode web server started. Local: http://127.0.0.1:%s LAN: %s PID: %s Logs: %s %s\n' "$port" "$url" "$pid" "$log_file" "$err_log_file"
 }
 
 stop_cmd() {
   ensure_runtime
   if [[ ! -f "$pid_file" ]]; then
     printf 'No saved PID file. Nothing stopped.\n'
+    stop_keep_awake
     status_cmd
     return 0
   fi
@@ -269,6 +365,7 @@ stop_cmd() {
   if ! pid_running_opencode "$pid"; then
     printf 'Saved PID %s is not a running opencode process. Removing stale state.\n' "$pid"
     rm -f "$pid_file" "$url_file"
+    stop_keep_awake
     return 0
   fi
   kill "$pid"
@@ -278,7 +375,8 @@ stop_cmd() {
     exit 1
   fi
   rm -f "$pid_file" "$url_file"
-  printf 'OpenCode web server stopped. Log preserved: %s\n' "$log_file"
+  stop_keep_awake
+  printf 'OpenCode web server stopped. Logs preserved: %s %s\n' "$log_file" "$err_log_file"
 }
 
 case "$cmd" in

@@ -49,15 +49,15 @@ If user requests another target license and aliases are unknown, ask one concise
 Use only read-only tools:
 
 - `itastack_list_available_services`
-- `itastack_m365_get_license_summary`
-- `itastack_grafana_query_halo_sql`
+- `itastack_itastack_m365` operation `get_subscribed_skus`
+- `itastack_itastack_grafana` operation `query_halo_sql`
 
 Optional targeted Pax8 tools:
 
-- `itastack_pax8_list_companies`
-- `itastack_pax8_list_subscriptions`
-- `itastack_pax8_list_products`
-- `itastack_pax8_get_product`
+- `itastack_itastack_pax8` operation `companies.list`
+- `itastack_itastack_pax8` operation `subscriptions.list`
+- `itastack_itastack_pax8` operation `products.list`
+- `itastack_itastack_pax8` operation `products.get`
 
 Do not call write-capable ITAStack tools.
 
@@ -66,7 +66,7 @@ Do not call write-capable ITAStack tools.
 - Do not create, update, delete, write notes, open tickets, update subscriptions, change licenses, change groups, or change users.
 - Do not run broad all-license Halo queries.
 - Halo SQL must be target-license-bounded and use `TOP 300` or lower.
-- Do not call `itastack_pax8_list_subscriptions` with `limit=0`.
+- Do not call `itastack_itastack_pax8` operation `subscriptions.list` with `limit=0`.
 
 ## Workflow
 
@@ -89,11 +89,7 @@ Continue only if M365 and Grafana/Halo are available. If one is unavailable, rep
 
 ### 3. Collect M365 counts
 
-For each in-scope tenant, call `itastack_m365_get_license_summary` with:
-
-```json
-{"tenant": "<tenant>"}
-```
+For each in-scope tenant, call `itastack_itastack_m365` with top-level `tenant: "<tenant>"`, operation `get_subscribed_skus`, and empty `params`.
 
 For `BUSINESS_PREMIUM`, extract only rows where `sku_part_number` or `skuPartNumber` is `SPB`.
 
@@ -104,7 +100,7 @@ Use:
 
 ### 4. Collect Halo counts
 
-For `BUSINESS_PREMIUM`, call `itastack_grafana_query_halo_sql` with `limit: 300` and:
+For `BUSINESS_PREMIUM`, call `itastack_itastack_grafana` operation `query_halo_sql` with `limit: 300` and:
 
 ```sql
 SELECT TOP 300

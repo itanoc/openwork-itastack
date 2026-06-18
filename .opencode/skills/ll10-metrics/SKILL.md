@@ -41,22 +41,22 @@ Build LL10 leadership scorecard metrics using OpenWork ITAStack Grafana query to
 
 Use only read-only OpenWork ITAStack Grafana tools:
 
-- `itastack_grafana_query_halo_sql`
-- `itastack_grafana_query_itglue_endpoint`
+- `itastack_itastack_grafana` operation `query_halo_sql`
+- `itastack_itastack_grafana` operation `query_itglue_endpoint`
 
-For LL10 metrics, use `itastack_grafana_query_halo_sql`.
+For LL10 metrics, use `itastack_itastack_grafana` operation `query_halo_sql`.
 
 ## Execution policy
 
 - TOOL-FIRST: first substantive action must be a read-only Grafana SQL tool call.
 - If date range is missing, say: `Assumption: using last 7 days.`
-- Then immediately call `itastack_grafana_query_halo_sql`.
+- Then immediately call `itastack_itastack_grafana` operation `query_halo_sql`.
 - SQL must be one bounded `SELECT TOP N` statement.
 - Use `TOP 1` for aggregate metric queries.
 - Do not perform web research.
 - Do not summarize workflow instead of querying data.
 - Do not mutate reports, dashboards, tickets, ITGlue records, or any external system.
-- If `itastack_grafana_query_halo_sql` is unavailable, say:
+- If `itastack_itastack_grafana` operation `query_halo_sql` is unavailable, say:
   - `Grafana MCP tools are not available in this chat; enable the ITAStack/OpenWork Grafana tool and retry.`
 
 ## Capability gap

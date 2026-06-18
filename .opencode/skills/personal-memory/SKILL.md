@@ -100,7 +100,7 @@ Default promoted topic files:
 
 ## Capture Triggers
 
-Auto-capture a candidate when the session contains a clear durable signal:
+Capture memory when the session contains a clear durable signal:
 
 - Preference: “I prefer X”, “do not do Y”, “use this style”.
 - Repeated correction: the user corrects agent behavior in a way likely to apply again.
@@ -108,13 +108,46 @@ Auto-capture a candidate when the session contains a clear durable signal:
 - Communication style: email, voice, meeting, report, summary, or response preferences.
 - Workflow habit: preferred sequence, tool choice, approval style, or final-answer format.
 - Personal work context: role, responsibilities, recurring clients/projects, only when useful for future work.
+- Explicit remember request: “remember this”, “remember next time”, “keep this in memory”.
 - Stable decision: “from now on”, “default to”, “always”, “never”.
 
 Do not capture one-off task details, temporary instructions, guesses about personality, or private facts not needed for future work.
 
+## Explicit Remember Workflow
+
+When the user explicitly asks to remember something, treat that request as approval to promote durable memory. Do not create only a candidate and ask the user to promote it again.
+
+Promote directly unless promotion is blocked by one of these conditions:
+
+- The memory would include secrets, credentials, raw private content, client-sensitive content, or third-party-sensitive content.
+- The memory conflicts with existing promoted memory.
+- The memory target is unclear enough that writing it would likely store the wrong rule.
+- The user asks to remember raw material rather than a redacted summary.
+
+If blocked, ask one focused question before writing. Prefer a redacted summary over raw content.
+
+Direct promotion steps:
+
+1. Read `memory/index.md` if it exists.
+2. Read only promoted topic files needed to detect conflicts or merge into the right category.
+3. Write or update the appropriate promoted topic file under:
+   - `memory/preferences/`
+   - `memory/docs/`
+   - `memory/voice/`
+   - `memory/email/`
+   - `memory/workflows/`
+4. Update frontmatter to `status: promoted` where relevant.
+5. Create or update `memory/index.md` with the promoted row.
+6. Create or update `memory/log.md` with a promotion entry.
+7. Delete or archive obsolete candidates that are fully superseded by the promoted memory.
+8. Remove stale candidate rows from `memory/index.md`.
+9. In the final response, mention the promoted memory path changed.
+
 ## Candidate Workflow
 
-When a capture trigger is clear:
+Use candidates only for inferred durable signals, repeated corrections, weak preferences, or possible future usefulness that the user did not explicitly ask to remember.
+
+When an inferred capture trigger is clear:
 
 1. Read `memory/index.md` if it exists.
 2. Check candidate filenames and index rows for similar unresolved candidates.
@@ -125,6 +158,8 @@ When a capture trigger is clear:
 7. In the final response, mention the candidate path and ask whether to promote it.
 
 Candidates are non-authoritative. Do not silently act on candidates as settled preferences.
+
+Do not use candidates for explicit “remember this” requests unless direct promotion is unsafe, sensitive, conflicting, or unclear.
 
 ## Recurrence Check
 
@@ -138,7 +173,7 @@ At the end of each session:
 
 ## Promotion Workflow
 
-Ask before promotion. When user approves:
+Ask before promotion only for candidates or conflict resolution. When the user approves candidate promotion:
 
 1. Merge relevant candidate content into the right promoted topic file:
    - `memory/preferences/`
@@ -207,6 +242,7 @@ If promoted memory is relevant and older than 90 days, ask whether it is still c
 ## Output Rules
 
 - Report exact memory paths changed.
-- Ask one focused promotion question when a candidate is worth promoting.
+- For explicit remember requests, report the promoted memory path changed and do not ask for promotion again.
+- For inferred captures, ask one focused promotion question when a candidate is worth promoting.
 - Keep memory notes short and operational.
 - Do not expose sensitive source text in chat when reporting capture.

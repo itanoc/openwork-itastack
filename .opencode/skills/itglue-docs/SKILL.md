@@ -92,38 +92,42 @@ Rules:
 
 ## Read Tools
 
-- Search organizations: `itastack_itglue_search_organizations`
-- Get organization: `itastack_itglue_get_organization`
-- Search documents: `itastack_itglue_search_documents`
-- Get document: `itastack_itglue_get_document`
-- List documents in folder: `itastack_itglue_list_documents_in_folder`
-- List document sections: `itastack_itglue_list_document_sections`
-- Search configurations/assets: `itastack_itglue_search_configurations`
-- Search/list contacts: `itastack_itglue_search_contacts`, `itastack_itglue_list_contacts`
-- Search/list locations: `itastack_itglue_search_locations`, `itastack_itglue_list_locations`
-- Search/list password metadata only: `itastack_itglue_search_passwords`, `itastack_itglue_list_passwords`, `itastack_itglue_get_password_metadata`
-- Generic read-only ITGlue REST query: `itastack_grafana_query_itglue_endpoint`
+- Search organizations: `itastack_itastack_itglue` operation `organizations.search`
+- Get organization: `itastack_itastack_itglue` operation `organizations.get`
+- Search documents: `itastack_itastack_itglue` operation `documents.search`
+- Get document: `itastack_itastack_itglue` operation `documents.get`
+- List documents in folder: `itastack_itastack_itglue` operation `documents.list_by_folder`
+- List document sections: `itastack_itastack_itglue` operation `document_sections.list`
+- Search configurations/assets: `itastack_itastack_itglue` operation `configurations.search`
+- Search/list contacts: `itastack_itastack_itglue` operation `contacts.search`, `itastack_itastack_itglue` operation `contacts.list`
+- Search/list locations: `itastack_itastack_itglue` operation `locations.search`, `itastack_itastack_itglue` operation `locations.list`
+- Search/list password metadata only: `itastack_itastack_itglue` operation `passwords.search`, `itastack_itastack_itglue` operation `passwords.list`
+- Do not call `itastack_itastack_itglue` operation `passwords.get` unless the user explicitly asks for a specific password record and output will be redacted.
+- Generic read-only ITGlue REST query: `itastack_itastack_grafana` operation `query_itglue_endpoint`
 
 ## Write Tools
 
-- Create document: `itastack_itglue_create_document`
+- Create document: `itastack_itastack_itglue` operation `documents.create`
   - Fields: `organization_id`, `name`, `content`, `document_folder_id`
-- Update document: `itastack_itglue_update_document`
+- Update document: `itastack_itastack_itglue` operation `documents.update`
   - Fields: `document_id`, `name`, `content`
   - Use for document title or whole-content updates only.
-- Delete document: `itastack_itglue_delete_document`
+- Delete document: `itastack_itastack_itglue` operation `documents.delete`
   - Fields: `document_id`
-- Create document section: `itastack_itglue_create_document_section`
-  - Fields: `document_id`, `resource_type`, `content`, `level`, `sort`, `duration`, `publish`
-  - Valid `resource_type`: `Document::Text`, `Document::Heading`, `Document::Step`, `Document::Gallery`
-- Delete document section: `itastack_itglue_delete_document_section`
-  - Fields: `document_id`, `section_id`, `publish`
-- Publish document: `itastack_itglue_publish_document`
+- Create document section using the specific helper operation when possible:
+  - Text: `itastack_itastack_itglue` operation `document_sections.create_text` with `document_id`, `content`, and optional `sort`
+  - Heading: `itastack_itastack_itglue` operation `document_sections.create_heading` with `document_id`, `content`, `level`, and optional `sort`
+  - Step: `itastack_itastack_itglue` operation `document_sections.create_step` with `document_id`, optional `content`, optional `duration`, optional `reset_count`, and optional `sort`
+  - Gallery: `itastack_itastack_itglue` operation `document_sections.create_gallery` with `document_id` and optional `sort`
+  - Generic fallback: `itastack_itastack_itglue` operation `document_sections.create` with `document_id` and `section_data`
+- Delete document section: `itastack_itastack_itglue` operation `document_sections.delete`
+  - Params: `document_id`, `section_id`
+- Publish document: `itastack_itastack_itglue` operation `documents.publish`
   - Fields: `document_id`
 
 Configuration write tools exist but are not documentation tools:
-- `itastack_itglue_create_configuration`
-- `itastack_itglue_update_configuration`
+- `itastack_itastack_itglue` operation `configurations.create`
+- `itastack_itastack_itglue` operation `configurations.update`
 
 Do not create/update ITGlue configurations unless user explicitly asks for asset/configuration changes.
 
@@ -135,8 +139,7 @@ Do not create/update ITGlue configurations unless user explicitly asks for asset
 - Use `Document::Step` for procedure actions.
 - Use `level: 2` for primary headings unless template shows different.
 - Use explicit `sort` values when inserting sections.
-- Always include explicit `publish` in proposed section payloads.
-- Do not publish unless user approved publish explicitly.
+- Do not include `publish` in section create/delete calls; publish separately with `documents.publish` only after user approved publish explicitly.
 - If user asked only for draft, never publish.
 
 Section edit limitation:

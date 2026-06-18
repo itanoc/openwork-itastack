@@ -100,7 +100,7 @@ Required checkpoints:
 Capture teammate identity before running the technical checks. This is a required onboarding step; only the `AGENTS.md` write is optional if the user declines shared-context storage.
 
 1. Ask for the teammate's first and last name.
-2. Search HaloPSA agents with the full name using the read-only Halo agent list/search tool when available, e.g. `itastack_halo_list_agents` with `search: "<first> <last>"`.
+2. Search HaloPSA agents with the full name using the read-only Halo agent list/search tool when available, e.g. `itastack_itastack_halo` operation `agents.list` with `search: "<first> <last>"`.
 3. From the selected Halo agent record, extract only onboarding-safe fields:
 
    - name
@@ -637,6 +637,7 @@ Create or update `.onboarding/openwork-onboarding-report.md` with:
 | Personal profile | <updated/declined/fail> | <Halo agent ID/email or reason skipped> |
 | Workstation readiness | <pass/partial/skipped/fail> | <Python/uv/Git/Node/package manager summary> |
 | Python reporting bundle | <installed/partial/skipped/fail> | <venv path/package-check.xlsx status> |
+| Personal memory setup | <populated/declined/skipped/fail> | <paths created or reason skipped> |
 
 ## Detailed Results
 
@@ -662,7 +663,46 @@ Create or update `.onboarding/openwork-onboarding-report.md` with:
 - "Create a checklist for this process in the workspace."
 ```
 
-### 12. Close onboarding
+### 12. Invoke personal memory setup
+
+At the end of onboarding, use the `personal-memory` skill to help the teammate initialize and populate safe personal OpenWork memory.
+
+Before writing memory, explain:
+
+> OpenWork can keep local personal memory in `memory/`. This is ignored personal workspace state, not shared repo context. I can save short summaries from onboarding so future sessions know your confirmed preferences, useful docs, workflow habits, and communication style. I will not store secrets, raw Halo payloads, full transcripts, client data, or raw private content.
+
+Ask one focused question:
+
+> Do you want me to initialize and populate safe personal memory from this onboarding?
+
+If approved:
+
+1. Load/use the `personal-memory` skill.
+2. Create missing memory directories and scaffold files only according to the memory system contract.
+3. Populate only confirmed, durable, non-sensitive summaries:
+   - `memory/workflows/onboarding-summary.md` — onboarding date, completed checks, follow-up items, and safe workflow habits.
+   - `memory/preferences/assistant-style.md` — only confirmed assistant/style preferences.
+   - `memory/email/tone-and-format.md` — only confirmed email/message preferences.
+   - `memory/voice/voice-mode.md` — only confirmed voice-mode preferences.
+   - `memory/docs/important-docs.md` — only safe docs, links, or workspace paths the teammate confirms should matter later.
+4. Update `memory/index.md` with promoted memory rows.
+5. Append `memory/log.md` with setup/population entries.
+6. Leave `memory/raw/` empty unless the user explicitly asks to store redacted raw material.
+7. Record memory setup status in `.onboarding/openwork-onboarding-report.md`.
+
+If declined:
+
+- Do not write personal memory.
+- Record memory setup as declined in `.onboarding/openwork-onboarding-report.md`.
+
+Safety rules:
+
+- Never store secrets, tokens, passwords, API keys, bearer strings, OAuth credentials, credential-like config, raw Halo agent payloads, full emails, screenshots, client documents, or private transcripts.
+- Prefer short summaries.
+- If unsure whether data is sensitive, ask before writing.
+- `AGENTS.md` remains shared workspace context; `memory/` remains local personal context.
+
+### 13. Close onboarding
 
 End with concise next steps:
 
@@ -703,3 +743,9 @@ End with concise next steps:
 - [ ] Installed the Python reporting bundle only in a local environment by default, or recorded skip/failure.
 - [ ] Verified Python reporting packages by importing them and creating `.onboarding/package-check.xlsx`, or recorded why verification was skipped.
 - [ ] Wrote `.onboarding/openwork-onboarding-report.md`.
+- [ ] Asked before initializing or populating personal memory.
+- [ ] Used the personal-memory skill for memory setup.
+- [ ] Populated only confirmed, durable, non-sensitive summaries.
+- [ ] Left memory/raw empty unless explicitly approved.
+- [ ] Updated memory/index.md and memory/log.md when memory was written.
+- [ ] Recorded memory setup status in .onboarding/openwork-onboarding-report.md.

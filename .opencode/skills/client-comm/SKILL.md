@@ -24,14 +24,14 @@ Do not use for ticket research, SQL reports, scheduling, or troubleshooting plan
 
 Read tools:
 
-- `itastack_halo_get_ticket`
-- `itastack_halo_list_ticket_actions`
-- `itastack_halo_list_tickets`
-- `itastack_halo_get_client`
-- `itastack_halo_get_site`
-- `itastack_halo_get_user`
-- `itastack_halo_search_users`
-- `itastack_halo_list_appointments`
+- `itastack_itastack_halo` operation `get_ticket`
+- `itastack_itastack_halo` operation `actions.list`
+- `itastack_itastack_halo` operation `tickets.list`
+- `itastack_itastack_halo` operation `clients.get`
+- `itastack_itastack_halo` operation `lookups.get_site`
+- `itastack_itastack_halo` operation `users.get`
+- `itastack_itastack_halo` operation `users.list`
+- `itastack_itastack_halo` operation `appointments.list`
 - `itastack_list_available_services`
 - `read` for workspace `AGENTS.md` sender identity lookup
 
@@ -54,19 +54,19 @@ Extension fallback:
    - Polish mode: rough draft provided; rewrite using ticket context.
    - Suggest mode: no topic; pull ticket and recommend best client communication.
 3. If user asks to polish but provides no rough draft, ask for draft and stop.
-4. Fetch ticket with `itastack_halo_get_ticket`:
+4. Fetch ticket with `itastack_itastack_halo` operation `get_ticket`:
    - `ticket_id`: provided/resolved ticket ID
    - `include_actions`: `true`
    - `slim`: `false`
    - `max_note_chars`: `8000`
    - `max_actions`: `5`
-5. If ticket fetch fails or ID ambiguous, use `itastack_halo_list_tickets` once to identify likely ticket, then ask user to confirm.
-6. If action history missing or too thin, use `itastack_halo_list_ticket_actions` with `count: 10`.
+5. If ticket fetch fails or ID ambiguous, use `itastack_itastack_halo` operation `tickets.list` once to identify likely ticket, then ask user to confirm.
+6. If action history missing or too thin, use `itastack_itastack_halo` operation `actions.list` with `count: 10`.
 7. Fetch related records only when useful and IDs are present:
-   - Client: `itastack_halo_get_client(client_id)`
-   - Requester: `itastack_halo_get_user(user_id)`
-   - Site: `itastack_halo_get_site(site_id)`
-   - Appointments: `itastack_halo_list_appointments(ticket_id)` only if timing/scheduling is part of topic.
+   - Client: `itastack_itastack_halo` operation `clients.get`
+   - Requester: `itastack_itastack_halo` operation `users.get`
+   - Site: `itastack_itastack_halo` operation `lookups.get_site`
+   - Appointments: `itastack_itastack_halo` operation `appointments.list` only if timing/scheduling is part of topic.
 8. Identify sender:
    - If user provides sender name, use it.
    - Otherwise read workspace `AGENTS.md` and look for a line starting with `Name:`.

@@ -26,8 +26,8 @@ Research a HaloPSA ticket using ticket context plus web research by default. Pro
 
 ## Tools
 
-- `itastack_halo_get_ticket`
-- `itastack_investigate_ticket`
+- `itastack_itastack_halo` operation `get_ticket`
+- `itastack_itastack_halo` operation `actions.list`
 - `itastack_list_available_services`
 - `webfetch`
 - OpenWork built-in browser tools for external websites:
@@ -49,7 +49,7 @@ Research a HaloPSA ticket using ticket context plus web research by default. Pro
 1. Identify required ticket, client, tenant, user, asset, and timeframe.
    - If ticket identity, client identity, tenant, or user is ambiguous, ask one concise clarification question and stop.
 
-2. Fetch Halo ticket first with `itastack_halo_get_ticket`:
+2. Fetch Halo ticket first with `itastack_itastack_halo` operation `get_ticket`:
    - `ticket_id`: provided ticket ID
    - `include_actions`: `true`
    - `slim`: `false`
@@ -99,21 +99,10 @@ Research a HaloPSA ticket using ticket context plus web research by default. Pro
    - Mark assumptions explicitly.
    - If safe fix is not clear, output “Need more data” with exact missing data.
 
-8. Treat `itastack_investigate_ticket` as optional follow-up only.
-   - Offer it when ticket + web evidence is insufficient, live tenant/service state is needed before safe action, or user asks for deeper service/API checks.
-   - Do not run it during initial pass unless live service state is required to avoid unsafe guidance.
-
-9. If optional investigation is requested, run `itastack_investigate_ticket` with:
-   - `ticket_id`: fetched ticket ID
-   - `ticket_summary`: ticket `summary`
-   - `ticket_description`: ticket `details`
-   - `actions_text`: concatenated action notes
-   - `client_name`: ticket `client_name` or `client_info.name`
-   - `client_id`: ticket `client_id` from end-customer ticket response
-   - `detail`: `false` unless deeper payloads are needed
-   - `max_finding_chars`: `8000`
-   - Stop on restricted/CMMC, 403/forbidden, or 404/not found.
-   - If `matched_services` is empty, read `diagnostics` and report what was scanned. Do not silently say “no matches.”
+8. If deeper investigation is needed, gather specific evidence with current service dispatchers instead of the deprecated ticket investigation helper:
+   - Use `itastack_itastack_halo` operation `actions.list` when ticket action history is incomplete.
+   - Use the relevant ITAStack dispatcher only after identifying the required tenant/service from ticket evidence.
+   - Stop and ask when tenant, client, user, asset, PBX, mailbox, or service scope is ambiguous.
    - Treat empty/null results as context, not failure.
 
 ## Guardrails
@@ -122,8 +111,8 @@ Research a HaloPSA ticket using ticket context plus web research by default. Pro
 - Local generated artifacts are allowed only when requested or clearly useful.
 - Stop if credentials, tenant, client, ticket identity, or user identity is ambiguous.
 - Stop if requested action would write data.
-- Do not run `itastack_investigate_ticket` with an empty summary when ticket fetch is available.
-- Always pass `ticket_description` and `actions_text` to `itastack_investigate_ticket`.
+- Do not use the deprecated ticket investigation helper; it is not available in the current dispatcher toolset.
+- Use `ticket_description` and `actions_text` from `get_ticket` plus targeted dispatcher reads instead.
 - Always use ticket end-customer `client_id`; never MSP org ID, agent ID, or guessed ID.
 - Use `user_email` only to disambiguate requester/affected user; do not override ticket data without evidence.
 - For outage-risk, destructive, tenant-wide, billing/license, DNS/mail-routing, or security-policy changes, include precheck, rollback, and require human approval.

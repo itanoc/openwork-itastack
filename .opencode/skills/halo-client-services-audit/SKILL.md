@@ -35,10 +35,10 @@ Produce a Markdown services-value report for one client by Halo client ID or cli
 
 Use only these OpenWork ITAStack tools:
 
-- `itastack_halo_search_clients`
-- `itastack_grafana_query_halo_sql`
+- `itastack_itastack_halo` operation `clients.list`
+- `itastack_itastack_grafana` operation `query_halo_sql`
 
-Use `itastack_halo_search_clients` only for client-name resolution. Use `itastack_grafana_query_halo_sql` for all audit queries.
+Use `itastack_itastack_halo` operation `clients.list` only for client-name resolution. Use `itastack_itastack_grafana` operation `query_halo_sql` for all audit queries.
 
 Tool call shape:
 
@@ -52,10 +52,10 @@ Tool call shape:
 ## Execution Policy
 
 - TOOL-FIRST:
-  - If the user provides a numeric client ID, first substantive action must be `itastack_grafana_query_halo_sql` identity query from workflow step 3.
-  - If the user provides a client name, first substantive action must be `itastack_halo_search_clients` client-name lookup from workflow step 2.
+  - If the user provides a numeric client ID, first substantive action must be `itastack_itastack_grafana` operation `query_halo_sql` identity query from workflow step 3.
+  - If the user provides a client name, first substantive action must be `itastack_itastack_halo` operation `clients.list` client-name lookup from workflow step 2.
 - Do not summarize without data.
-- If `itastack_grafana_query_halo_sql` is unavailable, say exactly:
+- If `itastack_itastack_grafana` operation `query_halo_sql` is unavailable, say exactly:
   `ITAStack Grafana Halo SQL tool is not available in this OpenWork session.`
   Then stop.
 - Read-only. Do not call write tools or mutation tools.
@@ -133,7 +133,7 @@ Tool call shape:
 
 2. Resolve client name when needed:
 
-   If `client` is not a positive integer, call `itastack_halo_search_clients`:
+   If `client` is not a positive integer, call `itastack_itastack_halo` operation `clients.list`:
 
    ```json
    {

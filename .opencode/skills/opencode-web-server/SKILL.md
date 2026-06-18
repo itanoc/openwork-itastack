@@ -23,8 +23,9 @@ Use this skill to manage a background `opencode web` server for the current work
 - Repair only empty, invalid OpenWork/OpenCode session rows that crash the web session list.
 - Start OpenCode web UI in the background for the active workspace.
 - Bind to `0.0.0.0` so LAN devices can connect.
+- Ask whether to prevent system sleep while the server runs, using a scoped helper when enabled.
 - Save local runtime state outside shared repo content.
-- Report LAN URL and log path.
+- Report LAN URL and log paths.
 - Stop the server safely using saved PID.
 - Check status without changing server state.
 
@@ -39,12 +40,19 @@ macOS/Linux:
 - `.opencode/skills/opencode-web-server/scripts/opencode-web-server.sh status --port 4096`
 - `.opencode/skills/opencode-web-server/scripts/opencode-web-server.sh stop`
 
+The macOS/Linux helper prompts for sleep prevention only when stdin is interactive. macOS uses `caffeinate` when approved; Linux currently continues without sleep prevention.
+
 Windows PowerShell:
 
 - `powershell -ExecutionPolicy Bypass -File .opencode\skills\opencode-web-server\scripts\opencode-web-server.ps1 bootstrap`
 - `powershell -ExecutionPolicy Bypass -File .opencode\skills\opencode-web-server\scripts\opencode-web-server.ps1 start -Port 4096 -Lan`
 - `powershell -ExecutionPolicy Bypass -File .opencode\skills\opencode-web-server\scripts\opencode-web-server.ps1 status -Port 4096`
 - `powershell -ExecutionPolicy Bypass -File .opencode\skills\opencode-web-server\scripts\opencode-web-server.ps1 stop`
+
+Windows PowerShell options:
+
+- Add `-PreventSleep` to skip the prompt and enable scoped sleep prevention.
+- Add `-NoPreventSleep` to skip the prompt and leave sleep behavior unchanged.
 
 ## Commands
 
@@ -68,6 +76,8 @@ Windows PowerShell:
 - Never kill broad process matches such as all `opencode` processes unless the user explicitly approves after seeing candidates.
 - Store runtime state under `.opencode/runtime/opencode-web-server/`; do not commit runtime files.
 - Use current workspace path, not hardcoded local paths.
+- Do not permanently change OS power plans. Keep sleep prevention scoped to a helper process saved under runtime state.
+- On stop, terminate only the saved keep-awake helper if it still looks script-owned. Never kill broad `caffeinate`, `powershell`, or `pwsh` matches.
 
 ## Runtime paths
 
@@ -75,8 +85,10 @@ Use workspace-relative runtime path:
 
 - Directory: `.opencode/runtime/opencode-web-server/`
 - PID file: `.opencode/runtime/opencode-web-server/server.pid`
-- Log file: `.opencode/runtime/opencode-web-server/server.log`
+- Log files: `.opencode/runtime/opencode-web-server/server.log` and `.opencode/runtime/opencode-web-server/server-err.log`
 - URL file: `.opencode/runtime/opencode-web-server/server.url`
+- Keep-awake PID file: `.opencode/runtime/opencode-web-server/keep-awake.pid`
+- Windows keep-awake helper script: `.opencode/runtime/opencode-web-server/keep-awake.ps1`
 
 If `.opencode/runtime/` is not ignored, add it to `.opencode/.gitignore` before starting the server.
 
@@ -107,12 +119,17 @@ If `.opencode/runtime/` is not ignored, add it to `.opencode/.gitignore` before 
 2. Check saved PID; if running and process is `opencode`, report existing server.
 3. Check target port. If occupied by an untracked process, report and stop unless user approves next action.
 4. Get LAN IP.
-5. Start `opencode web` in background.
-6. Save PID, URL, and log path.
-7. Verify process is alive and port is listening.
-8. Verify web root returns HTTP success.
-9. Verify session API. Use `OPENCODE_SERVER_USERNAME` and `OPENCODE_SERVER_PASSWORD` for Basic auth when present.
-10. Report local URL, LAN URL, PID file, log file, and backup path if repair occurred.
+5. Ask whether to prevent system sleep while the server runs.
+6. If approved, start scoped sleep-prevention helper:
+   - Windows: hidden PowerShell helper using `SetThreadExecutionState`; save helper PID. `-PreventSleep` enables this without prompting. `-NoPreventSleep` skips the prompt.
+   - macOS: `caffeinate`; save helper PID.
+   - Other OS: report unsupported and continue without sleep prevention.
+7. Start `opencode web` in background.
+8. Save PID, URL, and log paths.
+9. Verify process is alive and port is listening.
+10. Verify web root returns HTTP success.
+11. Verify session API without Basic auth; start clears inherited `OPENCODE_SERVER_USERNAME` and `OPENCODE_SERVER_PASSWORD` only for the child process.
+12. Report local URL, LAN URL, PID file, log files, sleep-prevention state, and backup path if repair occurred.
 
 ## Stop workflow
 
@@ -123,7 +140,8 @@ If `.opencode/runtime/` is not ignored, add it to `.opencode/.gitignore` before 
 5. Wait briefly.
 6. If still running, ask before force kill. Do not force-kill without confirmation.
 7. Remove PID and URL files only after process stops or PID was stale.
-8. Keep log file for troubleshooting unless user asks to remove it.
+8. Stop saved keep-awake helper only if it still looks script-owned.
+9. Keep log files for troubleshooting unless user asks to remove them.
 
 ## Status workflow
 
@@ -134,7 +152,7 @@ If `.opencode/runtime/` is not ignored, add it to `.opencode/.gitignore` before 
 5. Count invalid empty session rows for current workspace.
 6. Check session API if server is running.
 7. Report one of:
-   - Running: include PID, URL, log path, session API status.
+   - Running: include PID, URL, log paths, sleep-prevention state, session API status.
    - Stale PID: include stale PID and recommend cleanup.
    - Not running: include whether port is free or occupied by another process.
 
@@ -147,12 +165,12 @@ If session API still fails after repair, stop and report:
 - DB integrity result.
 - invalid empty row count.
 - API HTTP status and body reference.
-- server log path.
+- server log paths.
 
 ## Success criteria
 
 - Bootstrap: database path found, integrity `ok`, invalid empty rows fixed or none found.
-- Start: `opencode web` process is alive, port is listening, URL file exists, LAN URL reported.
+- Start: `opencode web` process is alive, port is listening, URL file exists, LAN URL reported, and any requested sleep-prevention helper is running with a saved PID.
 - Session list: OpenCode web UI/API lists OpenWork-created sessions for the current workspace.
-- Stop: saved PID no longer running, PID and URL files removed or marked stale, log preserved.
+- Stop: saved PID no longer running, PID and URL files removed or marked stale, any script-owned sleep-prevention helper stopped, log files preserved.
 - Status: process, port, database, and API state reported without modifying running server.

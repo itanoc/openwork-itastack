@@ -163,25 +163,25 @@ Before reporting a meaningful task complete, run a memory check:
 5. If promoted, merge relevant candidate content into the right topic file, delete obsolete candidate files, remove stale candidate rows from `memory/index.md`, and append `memory/log.md`.
 6. If nothing qualifies, state: `Memory check: nothing worth capturing.`
 
-## Repository sync checks
+## OpenWork configuration sync checks
 
-After 5 or more assistant turns, run a quiet OpenWork configuration update check. Repeat about every 5 assistant turns during longer sessions and before wrapping up meaningful work.
+After the first meaningful workspace-specific work in a session, run a quiet OpenWork configuration update check. Repeat about every 5 assistant turns during longer sessions and before wrapping up meaningful work.
 
-Use `git fetch --prune --quiet`, then `git status --short --branch`, then `git rev-list --left-right --count HEAD...@{upstream}`.
+Use the ITAStack MCP OpenWork config tools, not GitHub or repository pull/merge, for routine endpoint configuration sync:
 
-Stay silent when no action is needed.
+- `itastack_openwork_config_get_status`
+- `itastack_openwork_config_get_bundle_url`
+- `itastack_openwork_config_report_result`
 
-If updates are available, automatically use the endpoint-safe sync procedure. Shared OpenWork configuration updates are merged with endpoint-local OpenWork configuration changes. Do not overwrite endpoint-local work during routine sync.
+Stay silent when no update is available.
 
-Ignored local-only data must be preserved in place.
+If an update is available, use the `endpoint-sync` skill or equivalent documented procedure. Sync is agent-mediated only: no installed sync script, OS scheduler, LaunchAgent, systemd timer, Windows Scheduled Task, or background daemon is required for the default workflow.
 
-Report only when updates are applied, sync cannot complete, the check fails, or repository setup is missing. Avoid Git/GitHub wording in user-facing update messages unless troubleshooting requires it.
+Apply root is the currently opened OpenWork workspace root, not the user's global OpenCode/OpenWork config directory. Apply bundle paths into that workspace, for example `<workspace>/.opencode/skills/**` and `<workspace>/AGENTS.md`. Keep workspace-local sync state at `<workspace>/.openwork/state/itastack-config-installed.json`.
 
-Do not ask non-technical users to choose Git strategies. Do not push, branch, create PRs, rebase, stash, reset hard, or clean during endpoint sync handling.
+Never apply routine endpoint sync to `~/.config/opencode`, `%USERPROFILE%\.config\opencode`, or any other global user config directory unless the user has explicitly opened that directory as the current OpenWork workspace.
 
-When shared updates are available and endpoint-local uncommitted changes touch only allowlisted OpenWork configuration paths, save those changes with a local commit before pulling so normal merge behavior can preserve them. Stage only allowlisted paths; never use broad staging such as `git add .`.
-
-Allowlisted OpenWork configuration paths for endpoint auto-save:
+Allowed update paths are only:
 
 - `AGENTS.md`
 - `.opencode/skills/**`
@@ -189,11 +189,18 @@ Allowlisted OpenWork configuration paths for endpoint auto-save:
 - `.opencode/plugins/**`
 - `.opencode/workflows/**`
 - `.opencode/commands/**`
+- `memory/README.md`
+- `memory/TEMPLATES.md`
+- `memory/*/.gitkeep`
 
-Never auto-save, stage, or commit private/local paths, ignored files, secrets, logs, client data, or generated artifacts, including:
+Reject anything else, including `opencode.json`, `opencode.jsonc`, absolute paths, `..`, symlinks, hardlinks, and non-regular files.
 
+Private/local paths must never be applied, deleted, overwritten, or used as sync state input, including:
+
+- `opencode.json`
 - `opencode.jsonc`
 - `.env*`
+- `.openwork/state/**`
 - `memory/**`
 - `artifacts/**`
 - `.handoff/**`
@@ -203,9 +210,19 @@ Never auto-save, stage, or commit private/local paths, ignored files, secrets, l
 - `prototypes/**`
 - `teaching/**`
 
-Use fast-forward pull when there are no local commits to preserve. Use merge pull when endpoint-local commits exist. Never rebase. If local and shared changes conflict, stop and report that maintainer review is needed; do not auto-resolve conflicts.
+Exception: the allowlisted memory scaffold paths `memory/README.md`, `memory/TEMPLATES.md`, and `memory/*/.gitkeep` may be applied. No populated personal memory files may be applied.
 
-Use the `endpoint-sync` skill or equivalent documented procedure for implementation details.
+Routine sync uses authenticated MCP plus bundle SHA256 and per-file SHA256 checks. Local Ed25519 signature verification is not required for now.
+
+On first install with no state file, apply only after path validation, bundle SHA256 verification, and per-file SHA256 verification pass.
+
+After a state file exists, detect local drift before applying updates. If a current allowed file hash differs from the last installed hash in state, stop and report the drifted paths for maintainer review. Do not auto-merge and do not overwrite drifted files during routine sync.
+
+Do not automatically delete local files that are absent from the new manifest. Routine sync is add/update only.
+
+Report only when updates are applied, sync cannot complete, local drift is detected, or the MCP config service is unavailable. Avoid Git/GitHub wording in user-facing sync reports unless troubleshooting a separate repository task requires it.
+
+Do not offer to push, publish, upload, or sync local configuration back to the server as part of routine endpoint sync. This endpoint sync policy is pull-only.
 
 ## Assistant reply formatting
 

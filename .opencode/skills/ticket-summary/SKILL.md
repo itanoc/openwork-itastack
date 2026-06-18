@@ -25,22 +25,25 @@ Do not save files. Do not do web research. Do not perform writes.
 
 Read tools:
 
-- `itastack_halo_get_ticket`
-- `itastack_halo_list_tickets`
-- `itastack_halo_get_client`
-- `itastack_halo_get_user`
-- `itastack_halo_get_site`
-- `itastack_halo_list_ticket_actions`
-- `itastack_halo_list_appointments`
-- `itastack_halo_list_statuses`
-- `itastack_halo_list_priorities`
-- `itastack_halo_list_teams`
-- `itastack_halo_list_agents`
+- `itastack_itastack_halo` operation `get_ticket`
+- `itastack_itastack_halo` operation `tickets.list`
+- `itastack_itastack_halo` operation `clients.get`
+- `itastack_itastack_halo` operation `users.get`
+- `itastack_itastack_halo` operation `lookups.get_site`
+- `itastack_itastack_halo` operation `actions.list`
+- `itastack_itastack_halo` operation `appointments.list`
+- `itastack_itastack_halo` operation `lookups.list_statuses`
+- `itastack_itastack_halo` operation `lookups.list_priorities`
+- `itastack_itastack_halo` operation `lookups.list_teams`
+- `itastack_itastack_halo` operation `agents.list`
 
-Capability gap:
+Write tools:
 
-- Halo write tools are not exposed in this OpenWork toolset: create/update ticket, create ticket action, create/update/delete appointment.
-- If user requests a write, state gap and give fallback: “Use HaloPSA UI or ask for a draft note/update text.”
+- `itastack_itastack_halo` operation `tickets.update`
+- `itastack_itastack_halo` operation `actions.create`
+- `itastack_itastack_halo` operation `appointments.create`
+- `itastack_itastack_halo` operation `appointments.update`
+- Use write tools only after the user approves the exact target ticket/appointment, payload summary, and any note text.
 
 Extension fallback:
 
@@ -51,20 +54,20 @@ Extension fallback:
 
 1. Identify ticket, client, requester/user, asset, tenant, and timeframe from user text.
 2. If ticket identity is missing or ambiguous:
-   - If `client_name` or keywords exist, use `itastack_halo_list_tickets` once to search likely tickets.
+   - If `client_name` or keywords exist, use `itastack_itastack_halo` operation `tickets.list` once to search likely tickets.
    - If still ambiguous, ask one concise clarification question and stop.
-3. Fetch ticket with `itastack_halo_get_ticket`:
+3. Fetch ticket with `itastack_itastack_halo` operation `get_ticket`:
    - `ticket_id`: provided/resolved ticket ID
    - `include_actions`: `true`
    - `slim`: `false`
    - `max_note_chars`: `8000`
    - `max_actions`: `0`
-4. If action history is absent or clearly truncated, use `itastack_halo_list_ticket_actions` for more action context.
+4. If action history is absent or clearly truncated, use `itastack_itastack_halo` operation `actions.list` for more action context.
 5. Fetch related records only when useful and IDs are present:
-   - Client: `itastack_halo_get_client(client_id)`
-   - Requester: `itastack_halo_get_user(user_id)`
-   - Site: `itastack_halo_get_site(site_id)`
-   - Appointments: `itastack_halo_list_appointments(ticket_id)` when scheduling/current workload matters
+   - Client: `itastack_itastack_halo` operation `clients.get`
+   - Requester: `itastack_itastack_halo` operation `users.get`
+   - Site: `itastack_itastack_halo` operation `lookups.get_site`
+   - Appointments: `itastack_itastack_halo` operation `appointments.list` when scheduling/current workload matters
    - Status/priority/team/agent lookups: only when ticket response has IDs but not human-readable names
 6. Validate provided `client_name` and `user_email` against ticket data.
    - If they conflict, ask one concise clarification question and stop.
@@ -119,7 +122,7 @@ Each event line:
 - Ticket fetch returns 401/403/restricted/CMMC: stop and report restricted access.
 - Ticket fetch returns 404/not found: stop and report not found.
 - Other Halo tool errors: stop, report short error, do not infer ticket state.
-- Required action would write data: stop, state write tool gap, offer draft text.
+- Required action would write data but exact target/payload approval is missing: stop and ask for approval.
 - Credentials/tool auth unavailable: stop and report tool/credential issue.
 
 ## Output Style

@@ -56,7 +56,7 @@ Important distinction:
 
 Strict tool boundary. Use only:
 
-- `itastack_vsa_list_agents`
+- `itastack_itastack_vsa` operation `agents.list`
 - `question` only when one concise clarification or next-step choice is required
 
 Do not call:
@@ -99,10 +99,10 @@ Defaults:
 
 ### 2. Fetch inventory
 
-Call `itastack_vsa_list_agents` with:
+Call `itastack_itastack_vsa` operation `agents.list` with:
 
 ```json
-{"limit": 0}
+{"page_size": 100}
 ```
 
 If the tool fails or is unavailable:
