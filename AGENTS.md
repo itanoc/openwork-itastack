@@ -2,27 +2,64 @@
 
 Instructions for AI agents working in this OpenWork workspace.
 
+## Hard rule: Never use fenced code blocks
+
+NEVER output triple-backtick (```) fenced code blocks. The OpenWork UI clips them into broken white boxes. This overrides your default formatting instincts for code, commands, scripts, and config.
+
+Instead:
+
+- Commands, paths, var names: inline single backticks, e.g. `Get-WinEvent`.
+- Multi-line scripts/output: plain text as a numbered or plain line list, one statement per line, NO backtick fencing.
+- Never wrap any block in ``` or ~~~ for any language.
+
+Wrong:
+
+    ```powershell
+    Get-Date
+    ```
+
+Right:
+
+1. Get-Date
+2. Get-WinEvent -FilterHashtable @{ ... }
+
+## Hard rule: Keep responses concise
+
+In all interactions and commit messages, be extremely concise and sacrifice grammar for the sake of concision.
+
+## DO THIS FIRST: run these tool calls before your first reply
+
+On your FIRST response in a session, before you answer, plan, load any skill, or ask any question, you MUST make these tool calls now. This is not background context — execute it as your first actions:
+
+1. Call the `read` tool on `memory/index.md`. Then call the `read` tool on `CONTEXT.md`. If a file does not exist, note it and move on. Do this even if the user's request seems unrelated — memory may change how you answer.
+
+Do the above BEFORE acting on the user's request, even when the request tempts you to jump straight to another skill or answer. This applies EVEN when the request is itself a simple read or summary (e.g. "summarize AGENTS.md", "what does file X say") — do step 1 first, THEN read whatever the user asked about. Reading only the file the user named is NOT a substitute for step 1. Full policy: "Personal OpenWork memory" below.
+
 ## Purpose
 
 This directory is an OpenWork/OpenCode workspace configuration area, not normal application source code. Treat changes here as changes to how agents, skills, MCP servers, workflows, and OpenWork sessions behave.
 
 Primary audience: AI agents. Secondary audience: teammates reading the same operating rules.
 
-## REQUIRED: Caveman Prose
-
-**Hard rule. Every response, every turn.** Write like a smart caveman. Full technical accuracy stays. Fluff dies.
-
-- **Drop**: articles (a/an/the), filler (just/really/basically/simply), pleasantries ("Sure!", "Happy to help"), hedging ("I think maybe perhaps"), recap of what user just said, trailing summaries of what you did.
-- **Keep**: technical terms exact, code unchanged, file paths, line numbers, identifiers.
-- **Form**: fragments OK. Short clauses. Pattern → `[thing] [action] [reason]. [next step].`
-- **Bad**: "Sure! I'd be happy to help you with that. It looks like there's a bug in the auth middleware that we should probably fix."
-- **Good**: "Bug in auth middleware. Fix:"
-
-**Boundaries** — code, commit messages, PR descriptions, and documentation you author are written in normal prose. Caveman applies to chat output only.
-
-**Exception** — drop caveman for security warnings, irreversible-action confirmations, and when the user is confused. Resume after.
-
 ## Core behavior
+
+### DO THIS FIRST: ask to remember on every trigger
+
+This is not optional and does not require the user to say "remember." In EVERY session, capture when ANY of these fires — treat each as a hard trigger, not a judgment call:
+
+- The user **corrects you** or overrides something you did ("no, do it this way," "that's wrong," "actually we…").
+- The user **states a rule or preference** about how to work ("always…," "never…," "we use X for Y," "keep it to…").
+- The user **describes how a process or workflow goes**, or sets a boundary on one.
+- A **decision is settled** that a future session would otherwise re-litigate.
+- **You discover a reusable fact** while doing the work (a fix, a gotcha, a tool quirk, how their stack is set up) that would save a future agent the same dig.
+
+When a trigger fires, BEFORE finishing your reply, append this exact footnote: *"It seems like this would be helpful if I remembered this: [short summary]. Should I?"* Do NOT write anything to memory yet — asking is the capture step. Only when the user says yes do you promote it (see "Personal OpenWork memory").
+
+There are no candidates. Nothing is written to memory until the user confirms. When unsure whether something qualifies, ask anyway — asking is cheap, re-learning is not.
+
+Reminder cadence: on EVERY turn, if any asked-but-unconfirmed items are still outstanding, re-surface them briefly as a reminder so they do not silently drop.
+
+Do not skip the ask because the request was a normal task, because the user didn't ask, or because you are busy doing the main work. The full policy is under "Personal OpenWork memory" below.
 
 Use these rules for coding, non-coding office work, documents, spreadsheets, email drafts, ticket notes, research, scheduling, process updates, and workflow cleanup.
 
@@ -59,6 +96,8 @@ Before doing work:
 ### Keep work simple
 
 Do the minimum useful work that solves the request. Avoid speculative extras.
+
+For code: before adding custom abstractions or new dependencies, prefer no code, standard library, native platform features, or already-installed dependencies; ask before adding dependencies. Never cut security, validation, accessibility, data-loss protection, or required tests to stay small.
 
 - Do not add sections, tables, formatting, automations, or process steps that were not requested or clearly needed.
 - Do not over-design one-off documents or workflows.
@@ -112,15 +151,17 @@ Use the `personal-memory` skill when capturing, checking, promoting, pruning, or
 ### Directories
 
 - `memory/README.md`: shared contract for the memory system.
-- `memory/TEMPLATES.md`: candidate, promoted topic, index, and log templates.
-- `memory/index.md`: ignored personal index of promoted memory and candidates.
+- `memory/TEMPLATES.md`: promoted topic, decision, guide, index, and log templates.
+- `memory/index.md`: ignored personal index of promoted memory.
 - `memory/log.md`: ignored personal operation log.
-- `memory/candidates/`: ignored auto-captured memory awaiting approval.
+- `memory/glossary.md`: ignored personal entity directory — shorthand → full identity (client short names, nicknames, acronyms, project/engagement codenames). Distinct from `CONTEXT.md`: glossary answers "who/what is this?", CONTEXT.md answers "which meaning?".
 - `memory/preferences/`: ignored promoted assistant and working preferences.
 - `memory/docs/`: ignored promoted important docs, links, and paths.
 - `memory/voice/`: ignored promoted voice-mode preferences.
 - `memory/email/`: ignored promoted email and message preferences.
+- `memory/guides/`: ignored personal redacted Ticket Guides for future Halo ticket research.
 - `memory/workflows/`: ignored promoted workflow habits and approval preferences.
+- `memory/decisions/`: ignored promoted decisions finalized by decision-capture workflows.
 - `memory/raw/`: ignored raw snippets; use only with explicit approval.
 
 ### Safety rules
@@ -132,126 +173,42 @@ Use the `personal-memory` skill when capturing, checking, promoting, pruning, or
 
 ### Read policy
 
-- At session start or first workspace-specific task, read `memory/index.md` if it exists.
-- Read only promoted memory files relevant to the task.
+The top "DO THIS FIRST" block already requires reading `memory/index.md` and `CONTEXT.md` before your first reply. Beyond that:
+
+- Treat `CONTEXT.md` as canonical vocabulary — contested/overloaded terms with a chosen form and aliases to avoid ("which meaning?"), plus relationships and resolved ambiguities. If user language conflicts with it, briefly surface the conflict and ask which meaning applies.
+- Treat `memory/glossary.md` as the entity directory — shorthand → full identity ("who/what is this?"). Consult it before acting on any request containing shorthand entities. Routing when capturing: naming dispute → `CONTEXT.md`; plain label expansion → `memory/glossary.md`.
+- Read promoted memory files relevant to the task before choosing tools, applying workflow rules, drafting user-facing communication, or acting on workspace-specific behavior.
 - Before drafting email, voice scripts, Slack messages, reports, or other user-facing communication, check relevant promoted memory under `memory/email/`, `memory/voice/`, or `memory/preferences/`.
-- Do not treat `memory/candidates/` as authoritative. Use candidates for recurrence checks, promotion decisions, user-requested memory work, and next-best action insight.
+- Before researching Halo tickets, check relevant redacted Ticket Guides under `memory/guides/` after fetching the ticket and before web research.
+- Follow workspace-relative cross-links (`memory/topic.md`) between memory topics when a file points to a related one. Read tolerantly: never refuse to use a memory file for a missing optional field, unknown `type`, extra keys, missing `index.md`, or a broken link. A broken link may just be not-yet-written memory.
 
-### Capture triggers
+### Global capture
 
-Auto-capture a concise candidate under `memory/candidates/` when the session contains a clear durable signal:
+What happens after the ask (see "DO THIS FIRST: ask to remember on every trigger"). Nothing is written until the user confirms; there are no candidates.
 
-- Triggers: "remember this," "remember next time," "next time do,"
-- Preference: “I prefer X,” “do not do Y,” or “use this style.”
-- Repeated correction: the user corrects agent behavior in a way likely to apply again.
-- Important doc/link/path: the user says something should matter later.
-- Communication style: email, voice, meeting, report, summary, or response preferences.
-- Workflow habit: preferred sequence, tool choice, approval style, or final-answer format.
-- Personal work context: role, responsibilities, or recurring projects, only when useful for future work.
-- Stable decision: “from now on,” “default to,” “always,” or “never.”
-
-Do not capture one-off task details, temporary instructions, guesses about personality, or private facts not needed for future work.
-
-### Session-end memory check
-
-Before reporting a meaningful task complete, run a memory check:
-
-1. Review the current session for capture triggers.
-2. Check `memory/candidates/` for similar unresolved candidates.
-3. Auto-write clear new candidates using `memory/TEMPLATES.md`, update `memory/index.md`, and append `memory/log.md`.
-4. If a candidate repeats or is confirmed, recommend promotion and ask one focused question.
-5. If promoted, merge relevant candidate content into the right topic file, delete obsolete candidate files, remove stale candidate rows from `memory/index.md`, and append `memory/log.md`.
-6. If nothing qualifies, state: `Memory check: nothing worth capturing.`
-
-## OpenWork configuration sync checks
-
-After the first meaningful workspace-specific work in a session, run a quiet OpenWork configuration update check. Repeat about every 5 assistant turns during longer sessions and before wrapping up meaningful work.
-
-Use the ITAStack MCP OpenWork config tools, not GitHub or repository pull/merge, for routine endpoint configuration sync:
-
-- `itastack_openwork_config_get_status`
-- `itastack_openwork_config_get_bundle_url`
-- `itastack_openwork_config_report_result`
-
-Stay silent when no update is available.
-
-If an update is available, use the `endpoint-sync` skill or equivalent documented procedure. Sync is agent-mediated only: no installed sync script, OS scheduler, LaunchAgent, systemd timer, Windows Scheduled Task, or background daemon is required for the default workflow.
-
-Apply root is the currently opened OpenWork workspace root, not the user's global OpenCode/OpenWork config directory. Apply bundle paths into that workspace, for example `<workspace>/.opencode/skills/**` and `<workspace>/AGENTS.md`. Keep workspace-local sync state at `<workspace>/.openwork/state/itastack-config-installed.json`.
-
-Never apply routine endpoint sync to `~/.config/opencode`, `%USERPROFILE%\.config\opencode`, or any other global user config directory unless the user has explicitly opened that directory as the current OpenWork workspace.
-
-Allowed update paths are only:
-
-- `AGENTS.md`
-- `.opencode/skills/**`
-- `.opencode/agents/**`
-- `.opencode/plugins/**`
-- `.opencode/workflows/**`
-- `.opencode/commands/**`
-- `memory/README.md`
-- `memory/TEMPLATES.md`
-- `memory/*/.gitkeep`
-
-Reject anything else, including `opencode.json`, `opencode.jsonc`, absolute paths, `..`, symlinks, hardlinks, and non-regular files.
-
-Private/local paths must never be applied, deleted, overwritten, or used as sync state input, including:
-
-- `opencode.json`
-- `opencode.jsonc`
-- `.env*`
-- `.openwork/state/**`
-- `memory/**`
-- `artifacts/**`
-- `.handoff/**`
-- `.onboarding/**`
-- `.issues/**`
-- `youtube/**`
-- `prototypes/**`
-- `teaching/**`
-
-Exception: the allowlisted memory scaffold paths `memory/README.md`, `memory/TEMPLATES.md`, and `memory/*/.gitkeep` may be applied. No populated personal memory files may be applied.
-
-Routine sync uses authenticated MCP plus bundle SHA256 and per-file SHA256 checks. Local Ed25519 signature verification is not required for now.
-
-On first install with no state file, apply only after path validation, bundle SHA256 verification, and per-file SHA256 verification pass.
-
-After a state file exists, detect local drift before applying updates. If a current allowed file hash differs from the last installed hash in state, stop and report the drifted paths for maintainer review. Do not auto-merge and do not overwrite drifted files during routine sync.
-
-Do not automatically delete local files that are absent from the new manifest. Routine sync is add/update only.
-
-Report only when updates are applied, sync cannot complete, local drift is detected, or the MCP config service is unavailable. Avoid Git/GitHub wording in user-facing sync reports unless troubleshooting a separate repository task requires it.
-
-Do not offer to push, publish, upload, or sync local configuration back to the server as part of routine endpoint sync. This endpoint sync policy is pull-only.
+- **Promote on yes:** when the user says yes (or explicitly asks to remember something), use the `personal-memory` skill to promote it directly to the correct topic file, update `memory/index.md`, and append `memory/log.md`.
+- **Aggregate at wrap-up:** before finishing meaningful work, gather the session's unanswered triggers (plus any reusable facts you noticed but didn't ask about) and propose them as ONE consolidated "here's what I'd remember" list for a single yes/no. Skip items already confirmed or declined.
+- **Don't capture** one-off task details, temporary instructions, guesses about personality, or private facts not needed for future work.
 
 ## Assistant reply formatting
 
-Do not use fenced code blocks in assistant replies. The current OpenWork UI may clip fenced blocks. Use bullets, numbered lists, and inline commands instead. If copy-paste content is needed, provide it as plain text without triple-backtick fencing.
+Follow the top "Hard rule: Never use fenced code blocks": bullets, numbered lists, and inline single-backtick commands; copy-paste content as plain text.
 
 ## Next-best OpenWork action suggestions
 
 When helpful, suggest one concrete OpenWork action based on work type and likely user needs.
 
-Use `memory/index.md` → `Candidate Review Queue` as a primary source for discovering what may help the user next. Candidates are unconfirmed signals, not memory-management tasks by themselves. Use them to infer useful OpenWork actions, skills, workflows, docs, or artifacts to offer.
-
-Use candidates this way:
-
-- Read the top relevant candidate(s) for the current work; do not list every possible match.
-- Treat candidate content as insight for suggestions, not confirmed instruction.
-- If acting on a candidate would affect task direction, client output, workflow, or stored behavior, ask before applying it.
-- If a candidate points to a repeated need, suggest a concrete helper such as a skill, workflow, checklist, template, artifact, or OpenWork action.
-- If candidates conflict with the current request or promoted memory, surface the conflict and ask one focused question.
-- If no candidate is relevant, continue with normal action suggestions.
+Base suggestions on the live conversation and relevant promoted memory under `memory/`. If the current work points to a repeated need, suggest a concrete helper such as a skill, workflow, checklist, template, artifact, or OpenWork action. If a useful suggestion conflicts with the current request or promoted memory, surface the conflict and ask one focused question.
 
 Normal action suggestions:
 
 - Research results → save a Markdown artifact and move session to `Research`.
-- Repeatable procedure → propose a new `.opencode/skills/<name>/SKILL.md`.
+- Repeatable procedure → propose a new `.agents/skills/<name>/SKILL.md`.
 - Role-specific behavior → propose a new `.opencode/agents/<name>.md`.
 - Config or workspace convention changed → update `AGENTS.md` or a relevant skill.
-- Candidate suggests repeated workflow → offer to create or use a skill/checklist/template.
-- Candidate references a useful doc/path → offer to consult that source before proceeding.
-- Candidate suggests a preferred output style → ask whether to use that style for this task.
+- Repeated workflow observed in the session → offer to create or use a skill/checklist/template.
+- A useful doc/path comes up → offer to consult that source before proceeding.
+- A preferred output style comes up → ask whether to use that style for this task.
 - User decision needed → move session to `Needs review` and ask one focused question.
 - Finished useful work → move session to `Done`; pin only if it should stay easy to find.
 - Browser-heavy task → use or suggest OpenWork browser control.
@@ -277,7 +234,7 @@ Keep this file as the high-level operating policy.
 
 Use reusable project files when behavior becomes repeated:
 
-- `.opencode/skills/<skill-name>/SKILL.md` for repeatable workflows.
+- `.agents/skills/<skill-name>/SKILL.md` for repeatable workflows.
 - `.opencode/agents/<agent-name>.md` for role-specific agent behavior.
 - `AGENTS.md` for team-shared operating rules.
 - `opencode.jsonc` only for local private OpenCode/OpenWork configuration. This file is gitignored.

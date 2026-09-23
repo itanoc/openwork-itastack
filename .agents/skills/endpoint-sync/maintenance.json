@@ -1,0 +1,477 @@
+{
+  "operations": [
+    {
+      "id": "2026-06-29-remove-skill-audit",
+      "op": "delete",
+      "path": ".opencode/skills/skill-audit/SKILL.md",
+      "note": "skill-audit is maintainer-only; moved to .openwork-local and dropped from the bundle. Remove the stale copy from endpoints that synced it earlier."
+    },
+    {
+      "id": "2026-06-30-opencode-skills-grill-me-skill-md",
+      "op": "delete",
+      "path": ".opencode/skills/grill-me/SKILL.md",
+      "note": "grill-me renamed to talk-it-through; remove stale old file"
+    },
+    {
+      "id": "2026-06-30-opencode-skills-grill-me-context-format-md",
+      "op": "delete",
+      "path": ".opencode/skills/grill-me/CONTEXT-FORMAT.md",
+      "note": "grill-me renamed to talk-it-through; remove stale old file"
+    },
+    {
+      "id": "2026-06-30-opencode-skills-grill-me-decisions-format-md",
+      "op": "delete",
+      "path": ".opencode/skills/grill-me/DECISIONS-FORMAT.md",
+      "note": "grill-me renamed to talk-it-through; remove stale old file"
+    },
+    {
+      "id": "2026-06-30-remove-personal-memory-gate-py",
+      "op": "delete",
+      "path": ".opencode/skills/personal-memory/gate.py",
+      "note": "Candidate gate removed; personal-memory is now ask-first capture with no candidate budget/staleness/dedup. gate.py is dead code; remove the stale copy from endpoints."
+    },
+    {
+      "id": "2026-06-30-remove-memory-candidates-gitkeep",
+      "op": "delete",
+      "path": "memory/candidates/.gitkeep",
+      "note": "Candidates removed entirely; memory/candidates/ no longer exists. Remove the stale scaffold placeholder from endpoints that synced it earlier."
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-advanced-elicitation-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-advanced-elicitation.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-agent-analyst-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-agent-analyst.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-agent-architect-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-agent-architect.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-agent-builder-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-agent-builder.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-agent-dev-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-agent-dev.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-agent-pm-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-agent-pm.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-agent-tech-writer-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-agent-tech-writer.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-agent-ux-designer-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-agent-ux-designer.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-architecture-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-architecture.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-bmb-setup-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-bmb-setup.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-brainstorming-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-brainstorming.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-check-implementation-read",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-check-implementation-readiness.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-checkpoint-preview-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-checkpoint-preview.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-agent-brainstorming-c",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-agent-brainstorming-coach.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-agent-creative-proble",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-agent-creative-problem-solver.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-agent-design-thinking",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-agent-design-thinking-coach.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-agent-innovation-stra",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-agent-innovation-strategist.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-agent-presentation-ma",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-agent-presentation-master.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-agent-storyteller-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-agent-storyteller.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-design-thinking-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-design-thinking.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-innovation-strategy-m",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-innovation-strategy.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-problem-solving-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-problem-solving.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-cis-storytelling-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-cis-storytelling.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-code-review-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-code-review.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-correct-course-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-correct-course.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-create-architecture-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-create-architecture.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-create-prd-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-create-prd.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-create-story-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-create-story.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-customize-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-customize.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-dev-auto-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-dev-auto.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-dev-story-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-dev-story.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-document-project-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-document-project.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-domain-research-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-domain-research.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-edit-prd-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-edit-prd.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-editorial-review-prose-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-editorial-review-prose.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-editorial-review-structur",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-editorial-review-structure.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-eval-runner-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-eval-runner.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-forge-idea-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-forge-idea.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-help-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-help.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-index-docs-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-index-docs.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-market-research-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-market-research.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-module-builder-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-module-builder.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-party-mode-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-party-mode.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-prd-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-prd.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-prfaq-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-prfaq.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-product-brief-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-product-brief.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-qa-generate-e2e-tests-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-qa-generate-e2e-tests.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-quick-dev-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-quick-dev.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-retrospective-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-retrospective.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-review-adversarial-genera",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-review-adversarial-general.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-review-edge-case-hunter-m",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-review-edge-case-hunter.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-shard-doc-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-shard-doc.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-spec-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-spec.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-sprint-planning-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-sprint-planning.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-sprint-status-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-sprint-status.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-technical-research-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-technical-research.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-ux-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-ux.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-validate-prd-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-validate-prd.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-opencode-commands-bmad-workflow-builder-md",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-workflow-builder.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-bmad-create-epics-and-stories",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-create-epics-and-stories.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-21-bmad-generate-project-context",
+      "op": "delete",
+      "path": ".opencode/commands/bmad-generate-project-context.md",
+      "note": "Removing bmad commands fleet-wide"
+    },
+    {
+      "id": "2026-07-31-archive-unshipped-skills",
+      "op": "archive_unshipped_skills",
+      "note": "Archive endpoint skill files absent from the verified config bundle during this special sync."
+    },
+    {
+      "id": "2026-08-07-opencode-skills-email-skill-md",
+      "op": "delete",
+      "path": ".opencode/skills/email/SKILL.md",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-opencode-skills-interview-skill-md",
+      "op": "delete",
+      "path": ".opencode/skills/interview/SKILL.md",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-opencode-skills-opencode-web-server-skill-md",
+      "op": "delete",
+      "path": ".opencode/skills/opencode-web-server/SKILL.md",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-opencode-skills-opencode-web-server-scripts-open",
+      "op": "delete",
+      "path": ".opencode/skills/opencode-web-server/scripts/opencode-web-server.ps1",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-opencode-skills-personalize-claude-skill-md",
+      "op": "delete",
+      "path": ".opencode/skills/personalize-claude/SKILL.md",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-opencode-skills-personalize-opencode-skill-md",
+      "op": "delete",
+      "path": ".opencode/skills/personalize-opencode/SKILL.md",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-opencode-skills-skill-creator-skill-md",
+      "op": "delete",
+      "path": ".opencode/skills/skill-creator/SKILL.md",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-opencode-skills-sync-cowork-skills-skill-md",
+      "op": "delete",
+      "path": ".opencode/skills/sync-cowork-skills/SKILL.md",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-opencode-skills-sync-cowork-skills-scripts-bridg",
+      "op": "delete",
+      "path": ".opencode/skills/sync-cowork-skills/scripts/bridge_skills.py",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-opencode-skills-youtube-skill-md",
+      "op": "delete",
+      "path": ".opencode/skills/youtube/SKILL.md",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    },
+    {
+      "id": "2026-08-07-remove-opencode-web-server-sh",
+      "op": "delete",
+      "path": ".opencode/skills/opencode-web-server/scripts/opencode-web-server.sh",
+      "note": "Skill excluded from bundle (maintainer-only/personal); remove stale endpoint copy"
+    }
+  ]
+}

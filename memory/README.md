@@ -15,8 +15,10 @@ Use `memory/` to preserve durable non-code preferences and useful working contex
 - Assistant response preferences.
 - Email and voice communication preferences.
 - Important docs, links, or paths to remember.
+- Redacted reusable Ticket Guides for future Halo ticket research.
 - Workflow habits and approval preferences.
 - Repeated corrections that should become future defaults.
+- Decisions deliberately finalized by decision-capture workflows.
 
 ## Safety
 
@@ -40,33 +42,26 @@ memory/
 ├── TEMPLATES.md
 ├── index.md
 ├── log.md
-├── candidates/
+├── glossary.md    # ignored — entity directory (shorthand -> identity)
 ├── preferences/
 ├── docs/
 ├── voice/
 ├── email/
+├── guides/
 ├── workflows/
+├── decisions/
 └── raw/
 ```
 
-## Candidate Gate
+## Capture Gate
 
-New inferred or auto-captured memory starts in `memory/candidates/`.
+There are no candidates. When a capture trigger fires (a correction, a stated rule/preference, a described workflow/boundary, a settled decision, or a reusable fact discovered while working), the agent ASKS in chat and writes to memory only after the user confirms. Nothing is written on inference alone.
 
-Promote only after user approval. When a candidate is promoted, merge it into the relevant topic file and delete obsolete candidate files.
+Workflows that finalize durable knowledge with the user in the loop, such as `talk-it-through`, treat the in-session confirmation as the approval and promote settled items directly to their proper topic file at wrap-up.
 
 ## Naming
 
-Candidate files use lowercase hyphenated names with a type prefix:
-
-- `preference-<slug>.md`
-- `doc-<slug>.md`
-- `email-<slug>.md`
-- `voice-<slug>.md`
-- `workflow-<slug>.md`
-- `context-<slug>.md`
-
-Default promoted topic files:
+Use lowercase hyphenated slugs. Default promoted topic files:
 
 - `memory/preferences/assistant-style.md`
 - `memory/email/tone-and-format.md`
@@ -75,15 +70,31 @@ Default promoted topic files:
 - `memory/workflows/session-end.md`
 - `memory/workflows/approval-style.md`
 
+Decision-capture workflows may create promoted decision files under `memory/decisions/` using `decision-<slug>.md`.
+
+Ticket Guides use flat, searchable filenames under `memory/guides/`, for example `m365-shared-mailbox-send-as-failure.md`.
+
+The entity directory is a single root file `memory/glossary.md` (sections Clients / People / Acronyms / Codenames) — shorthand -> full identity. It is distinct from `CONTEXT.md`: glossary answers "who/what is this?", CONTEXT.md answers "which meaning?". Contested/overloaded terms go to `CONTEXT.md`; plain label expansions go to the glossary.
+
 ## Session-End Check
 
 Before finishing a meaningful session, agents should check whether anything should be captured, promoted, merged, or discarded.
 
 If nothing qualifies, say: `Memory check: nothing worth capturing.`
 
+## Cross-linking
+
+- Memory topics may link to each other with standard markdown links using workspace-relative paths that start with `memory/`, for example `[email tone](memory/email/tone-and-format.md)` — the same base `memory/index.md` uses.
+- A link expresses a relationship; the relationship kind lives in the prose, not the link.
+- Backlinks ("Cited by") are not stored; compute them at read time by reversing the link graph when useful.
+
+## Tolerant Reads
+
+Consume memory permissively. Never refuse to use a memory file because of missing optional frontmatter fields, an unknown `type`, extra unrecognized keys, a missing `index.md`, or a broken cross-link. Do best-effort consumption; a broken link may just be not-yet-written memory.
+
 ## Maintenance
 
 - Recreate missing ignored `memory/index.md` or `memory/log.md` when first needed.
-- Before creating a candidate, check existing candidates for duplicates and update similar candidates instead of creating buildup.
-- If promoted memory conflicts with a new candidate, keep the promoted rule active until the user approves a change.
+- Before writing confirmed memory, check existing topic files for a match and update in place instead of duplicating.
+- If a confirmed item conflicts with existing promoted memory, keep the promoted rule active and ask which wins before changing it.
 - If a promoted memory item is relevant and older than 90 days, ask whether it is still current.

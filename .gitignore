@@ -2,11 +2,12 @@
 .env
 .env.*
 opencode.jsonc
+.mcp.json
 
 # macOS
 .DS_Store
 .opencode/.DS_Store
-.opencode/skills/.DS_Store
+.agents/skills/.DS_Store
 
 # OpenWork local dependencies/config
 .opencode/node_modules/
@@ -17,9 +18,7 @@ opencode.jsonc
 # Personal OpenWork memory
 memory/index.md
 memory/log.md
-memory/candidates/**
-!memory/candidates/
-!memory/candidates/.gitkeep
+memory/glossary.md
 memory/preferences/**
 !memory/preferences/
 !memory/preferences/.gitkeep
@@ -32,9 +31,15 @@ memory/voice/**
 memory/email/**
 !memory/email/
 !memory/email/.gitkeep
+memory/guides/**
+!memory/guides/
+!memory/guides/.gitkeep
 memory/workflows/**
 !memory/workflows/
 !memory/workflows/.gitkeep
+memory/decisions/**
+!memory/decisions/
+!memory/decisions/.gitkeep
 memory/raw/**
 !memory/raw/
 !memory/raw/.gitkeep
@@ -44,12 +49,16 @@ teaching/
 
 # Throwaway prototypes
 prototypes/
+prototype/
 
 # Generated YouTube extraction artifacts
 /youtube/
 
 # Generated OpenWork artifacts
 /artifacts/
+
+# Local email exports and attachments
+/email/
 
 # Local handoff documents
 /.handoff/
@@ -60,3 +69,14 @@ prototypes/
 # Local public-safe GitHub issue drafts
 .issues/*
 !.issues/.gitkeep
+
+# Sanitized shareable OpenCode artifacts
+/personal-opencode/
+
+# Sanitized shareable Claude Cowork artifacts
+/personal-claude/
+
+# Python bytecode and packaged skill archives
+__pycache__/
+*.pyc
+*.zip

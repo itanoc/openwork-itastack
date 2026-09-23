@@ -1,0 +1,479 @@
+---
+name: team-metrics
+description: |
+  Build weekly technician and team KPI metrics using read-only OpenWork ITAStack Grafana Halo SQL tools.
+
+  Triggers when user mentions:
+  - "team metrics"
+  - "weekly team report"
+  - "performance dashboard"
+  - "technician KPI"
+  - "FCR"
+---
+
+# Team Metrics
+
+Use this skill to run weekly team performance metrics from HaloPSA data through OpenWork ITAStack Grafana MCP tools.
+
+Do not use this skill for individual ticket research or ad-hoc troubleshooting. Use `ticket-summary` or `halo-ticket-research` instead.
+
+## Output style
+
+- Keep every section short.
+- Use bullets over prose.
+- Skip sections that do not apply.
+- Expand only if the user asks for more detail.
+- Keep each output section to five bullets or fewer unless detail is required.
+
+## Goal
+
+Build technician or team KPI metrics using read-only OpenWork ITAStack Grafana query tools.
+
+## Inputs
+
+- Date range or lookback period.
+- Optional placeholders when provided:
+  - `{ticket_id}`
+  - `{client_name}`
+  - `{user_email}`
+- Any free-text context from chat.
+
+Default:
+
+- If no date range is provided, use last 7 days.
+- Before first tool call, say: `Assumption: using last 7 days.`
+
+## Required tools
+
+Use only read-only OpenWork ITAStack Grafana tools:
+
+- `itastack_itastack_grafana` operation `query_halo_sql`
+- `itastack_itastack_grafana` operation `query_itglue_endpoint` only if ITGlue context is explicitly needed
+
+For this workflow, use `itastack_itastack_grafana` operation `query_halo_sql`.
+
+Tool call shape:
+
+```json
+{
+  "operation": "query_halo_sql",
+  "params": {
+    "sql": "SELECT TOP 1 ...",
+    "limit": 100
+  }
+}
+```
+
+## Execution policy
+
+- TOOL-FIRST: first substantive action must be a read-only Grafana tool call.
+- If date range is missing, state the last-7-days assumption, then immediately call `itastack_itastack_grafana` operation `query_halo_sql`.
+- Use only `itastack_itastack_grafana` operations that match this workflow.
+- Use one bounded read-only SQL query per tool call.
+- Prefer `SELECT TOP 1` for aggregate metric queries.
+- Do not perform web research.
+- Do not summarize the workflow instead of querying Grafana.
+- Do not mutate reports, dashboards, tickets, ITGlue records, or any external system.
+- If `itastack_itastack_grafana` operation `query_halo_sql` is unavailable, say: `Grafana MCP tools are not available in this chat; enable the ITAStack/OpenWork Grafana tool and retry.`
+
+## Capability gap
+
+- Read-only Grafana MCP tools only.
+- No dashboard/report mutation.
+- No writes to HaloPSA or ITGlue.
+- No direct Grafana dashboard edits.
+
+If the user asks for a write or dashboard mutation, state the gap first, then give a read-only fallback path.
+
+## Stop conditions
+
+- Stop if required credentials, tenant, client, ticket identity, or timeframe is ambiguous.
+- Stop if requested action would write data.
+- Stop if required Grafana tool is unavailable.
+
+## Output sections
+
+Use these sections when applicable:
+
+- Request understood
+- Evidence gathered
+- Recommended action
+- Next step
+
+For complete team reports, include:
+
+- Total queries executed and success/failure count
+- Compiled summary dashboard
+- Any errors encountered with the failed section name
+- Timestamp of report generation
+
+## Team agents
+
+| Name | Agent ID / Assignedtoint | Uname DB key / unum | Role |
+|------|---------------------------|---------------------|------|
+| James Schriever | 14 | 14 | Manager / 1st Line |
+| Kevin Casper | 20 | 20 | 1st Line Support |
+| Laura Barbosa | 23 | 23 | 1st Line Support / Triage / Dispatch |
+| Riely Borek | 25 | 25 | 2nd Line Support |
+| Emilio | 70 | 70 | 2nd Line Support |
+
+Team agent filter:
+
+- `f.Assignedtoint IN (14, 20, 23, 25, 70)`
+
+## Definitions
+
+- Closed ticket: `Status IN (8, 9)` and `datecleared` within the period.
+- Standard ticket filters: `fdeleted = 0 AND RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)`.
+- FCR: closed ticket completed after exactly one non-deleted appointment.
+- Appointment count source: `Appointment` where `APFaultid = f.Faultid` and `APdeleted = 0`.
+- Onsite appointment: `apappointmenttype IN (5, 7)`.
+- Billable hours: `ACTIONS.ActionChargeHours` where `ActIsBillable = 1`.
+- HaloPSA datetimes are UTC.
+- Convert business-hour filters with `AT TIME ZONE 'UTC' AT TIME ZONE 'Pacific Standard Time'`.
+
+## Schema notes
+
+| Purpose | Correct column | Avoid |
+|---------|----------------|-------|
+| Appointment ticket FK | `APFaultid` | `Faultid` in `Appointment` |
+| Appointment deleted flag | `APdeleted` |  |
+| Appointment owner | `APunum` |  |
+| Ticket assigned agent | `Assignedtoint` |  |
+| Action owner | `whoagentid` |  |
+
+## Query rules
+
+- Replace `@PERIOD_DAYS` with the numeric lookback period before executing.
+- If user supplies explicit dates, replace relative predicates with bounded start/end date predicates.
+- Keep each query as one bounded read-only `SELECT TOP N` query.
+- Do not use `SET DATEFIRST`; use `DATENAME(WEEKDAY, ...) NOT IN ('Saturday', 'Sunday')` for weekday filtering.
+- If one query fails, show the error, note it in the report, and continue to the next query.
+
+## Query 1 - Team-wide metrics
+
+```sql
+SELECT TOP 1
+    COUNT(*) AS [Total Closed],
+    CAST(ROUND(100.0 * SUM(CASE WHEN DATEDIFF(HOUR, f.dateoccured, f.datecleared) <= 24 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS DECIMAL(5,1)) AS [% Closed in 24h],
+    CAST(ROUND(100.0 * SUM(CASE WHEN DATEDIFF(HOUR, f.dateoccured, f.datecleared) <= 48 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS DECIMAL(5,1)) AS [% Closed in 48h],
+    CAST(ROUND(100.0 * SUM(CASE WHEN apt.AppointmentCount < 5 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS DECIMAL(5,1)) AS [% < 5 Appts],
+    CAST(ROUND(100.0 * SUM(CASE WHEN apt.AppointmentCount = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS DECIMAL(5,1)) AS [% FCR]
+FROM faults f
+CROSS APPLY (
+    SELECT COUNT(*) AS AppointmentCount
+    FROM Appointment a2
+    WHERE a2.APFaultid = f.Faultid
+      AND a2.APdeleted = 0
+) apt
+WHERE f.fdeleted = 0
+  AND f.Status IN (8, 9)
+  AND f.RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)
+  AND f.Assignedtoint IN (14, 20, 23, 25, 70)
+  AND f.datecleared >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+```
+
+Display as:
+
+## Team-Wide (Last 7 Days)
+
+| Metric | Value |
+|--------|-------|
+| Total Tickets Closed | N |
+| % Closed within 24h | X% |
+| % Closed within 48h | X% |
+| % Closed in < 5 Appointments | X% |
+| % First Contact Resolution | X% |
+
+## Query 2a - Riely Borek FCR
+
+```sql
+SELECT TOP 1
+    COUNT(*) AS [Total Closed],
+    SUM(CASE WHEN apt.AppointmentCount = 1 THEN 1 ELSE 0 END) AS [FCR Count],
+    CAST(ROUND(100.0 * SUM(CASE WHEN apt.AppointmentCount = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS DECIMAL(5,1)) AS [% FCR]
+FROM faults f
+CROSS APPLY (
+    SELECT COUNT(*) AS AppointmentCount
+    FROM Appointment a2 WHERE a2.APFaultid = f.Faultid AND a2.APdeleted = 0
+) apt
+WHERE f.fdeleted = 0
+  AND f.Status IN (8, 9)
+  AND f.RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)
+  AND f.Assignedtoint = 25
+  AND f.datecleared >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+```
+
+## Query 2b - Riely Borek tickets closed
+
+```sql
+SELECT TOP 1 COUNT(*) AS [Tickets Closed]
+FROM faults f
+WHERE f.fdeleted = 0
+  AND f.Status IN (8, 9)
+  AND f.RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)
+  AND f.Assignedtoint = 25
+  AND f.datecleared >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+```
+
+## Query 2c - Riely Borek onsites
+
+```sql
+SELECT TOP 1 COUNT(*) AS [Onsites]
+FROM Appointment a
+WHERE a.APdeleted = 0
+  AND a.APunum = 25
+  AND a.apappointmenttype IN (5, 7)
+  AND a.APStartDate >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+  AND a.APStartDate < GETDATE()
+```
+
+Display as:
+
+## Riely Borek (Last 7 Days)
+
+| Metric | Value |
+|--------|-------|
+| % First Contact Resolution | X% |
+| Tickets Closed | N |
+| Onsites | N |
+
+## Query 3a - Emilio FCR
+
+```sql
+SELECT TOP 1
+    COUNT(*) AS [Total Closed],
+    SUM(CASE WHEN apt.AppointmentCount = 1 THEN 1 ELSE 0 END) AS [FCR Count],
+    CAST(ROUND(100.0 * SUM(CASE WHEN apt.AppointmentCount = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS DECIMAL(5,1)) AS [% FCR]
+FROM faults f
+CROSS APPLY (
+    SELECT COUNT(*) AS AppointmentCount
+    FROM Appointment a2 WHERE a2.APFaultid = f.Faultid AND a2.APdeleted = 0
+) apt
+WHERE f.fdeleted = 0
+  AND f.Status IN (8, 9)
+  AND f.RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)
+  AND f.Assignedtoint = 70
+  AND f.datecleared >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+```
+
+## Query 3b - Emilio tickets closed
+
+```sql
+SELECT TOP 1 COUNT(*) AS [Tickets Closed]
+FROM faults f
+WHERE f.fdeleted = 0
+  AND f.Status IN (8, 9)
+  AND f.RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)
+  AND f.Assignedtoint = 70
+  AND f.datecleared >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+```
+
+## Query 3c - Emilio onsites
+
+```sql
+SELECT TOP 1 COUNT(*) AS [Onsites]
+FROM Appointment a
+WHERE a.APdeleted = 0
+  AND a.APunum = 70
+  AND a.apappointmenttype IN (5, 7)
+  AND a.APStartDate >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+  AND a.APStartDate < GETDATE()
+```
+
+Display as:
+
+## Emilio (Last 7 Days)
+
+| Metric | Value |
+|--------|-------|
+| % First Contact Resolution | X% |
+| Tickets Closed | N |
+| Onsites | N |
+
+## Query 4a - Kevin Casper FCR
+
+```sql
+SELECT TOP 1
+    COUNT(*) AS [Total Closed],
+    SUM(CASE WHEN apt.AppointmentCount = 1 THEN 1 ELSE 0 END) AS [FCR Count],
+    CAST(ROUND(100.0 * SUM(CASE WHEN apt.AppointmentCount = 1 THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) AS DECIMAL(5,1)) AS [% FCR]
+FROM faults f
+CROSS APPLY (
+    SELECT COUNT(*) AS AppointmentCount
+    FROM Appointment a2 WHERE a2.APFaultid = f.Faultid AND a2.APdeleted = 0
+) apt
+WHERE f.fdeleted = 0
+  AND f.Status IN (8, 9)
+  AND f.RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)
+  AND f.Assignedtoint = 20
+  AND f.datecleared >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+```
+
+## Query 4b - Kevin Casper tickets closed
+
+```sql
+SELECT TOP 1 COUNT(*) AS [Tickets Closed]
+FROM faults f
+WHERE f.fdeleted = 0
+  AND f.Status IN (8, 9)
+  AND f.RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)
+  AND f.Assignedtoint = 20
+  AND f.datecleared >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+```
+
+## Query 4c - Kevin Casper billable hours
+
+```sql
+SELECT TOP 1
+    CAST(ROUND(COALESCE(SUM(a.ActionChargeHours), 0), 1) AS DECIMAL(10,1)) AS [Billable Hours]
+FROM ACTIONS a
+WHERE a.whoagentid = 20
+  AND a.ActIsBillable = 1
+  AND a.Whe_ >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+```
+
+Display as:
+
+## Kevin Casper (Last 7 Days)
+
+| Metric | Value |
+|--------|-------|
+| % First Contact Resolution | X% |
+| Tickets Closed | N |
+| Billable Hours | X.X hrs |
+
+## Query 5a - Laura Barbosa average triage time
+
+```sql
+SELECT TOP 1
+    COUNT(*) AS [Tickets Triaged],
+    CAST(ROUND(AVG(triageMin), 1) AS DECIMAL(10,1)) AS [Avg Triage (min)]
+FROM (
+    SELECT
+        f.Faultid,
+        CAST(DATEDIFF(MINUTE, f.dateoccured, fa.FirstLauraAction) AS FLOAT) AS triageMin
+    FROM faults f
+    CROSS APPLY (
+        SELECT TOP 1 a.Whe_ AS FirstLauraAction
+        FROM ACTIONS a
+        WHERE a.Faultid = f.Faultid AND a.whoagentid = 23
+        ORDER BY a.actionnumber ASC
+    ) fa
+    CROSS APPLY (
+        SELECT
+            CAST(f.dateoccured AT TIME ZONE 'UTC' AT TIME ZONE 'Pacific Standard Time' AS DATETIME) AS LocalCreated,
+            CAST(fa.FirstLauraAction AT TIME ZONE 'UTC' AT TIME ZONE 'Pacific Standard Time' AS DATETIME) AS LocalAction
+    ) tz
+    WHERE f.fdeleted = 0
+      AND f.RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)
+      AND fa.FirstLauraAction >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+      AND DATEDIFF(MINUTE, f.dateoccured, fa.FirstLauraAction) BETWEEN 0 AND 540
+      AND DATENAME(WEEKDAY, tz.LocalCreated) NOT IN ('Saturday', 'Sunday')
+      AND (
+          CAST(tz.LocalCreated AS TIME) BETWEEN '07:30:00' AND '12:30:00'
+          OR CAST(tz.LocalCreated AS TIME) BETWEEN '13:30:00' AND '16:30:00'
+      )
+      AND (
+          CAST(tz.LocalAction AS TIME) BETWEEN '07:30:00' AND '12:30:00'
+          OR CAST(tz.LocalAction AS TIME) BETWEEN '13:30:00' AND '16:30:00'
+      )
+) sub
+```
+
+## Query 5b - Laura Barbosa average dispatch time
+
+```sql
+SELECT TOP 1
+    COUNT(*) AS [Tickets Dispatched],
+    CAST(ROUND(AVG(dispatchMin), 1) AS DECIMAL(10,1)) AS [Avg Dispatch (min)]
+FROM (
+    SELECT
+        f.Faultid,
+        CAST(DATEDIFF(MINUTE, fa.FirstLauraAction, f.dateassigned) AS FLOAT) AS dispatchMin
+    FROM faults f
+    CROSS APPLY (
+        SELECT TOP 1 a.Whe_ AS FirstLauraAction
+        FROM ACTIONS a
+        WHERE a.Faultid = f.Faultid AND a.whoagentid = 23
+        ORDER BY a.actionnumber ASC
+    ) fa
+    CROSS APPLY (
+        SELECT CAST(fa.FirstLauraAction AT TIME ZONE 'UTC' AT TIME ZONE 'Pacific Standard Time' AS DATETIME) AS LocalAction
+    ) tz
+    WHERE f.fdeleted = 0
+      AND f.RequestTypeNew NOT IN (5, 20, 22, 26, 30, 50)
+      AND f.dateassigned IS NOT NULL
+      AND fa.FirstLauraAction >= DATEADD(DAY, -@PERIOD_DAYS, GETDATE())
+      AND DATEDIFF(MINUTE, fa.FirstLauraAction, f.dateassigned) BETWEEN 0 AND 540
+      AND DATENAME(WEEKDAY, tz.LocalAction) NOT IN ('Saturday', 'Sunday')
+      AND (
+          CAST(tz.LocalAction AS TIME) BETWEEN '07:30:00' AND '12:30:00'
+          OR CAST(tz.LocalAction AS TIME) BETWEEN '13:30:00' AND '16:30:00'
+      )
+) sub
+```
+
+Display as:
+
+## Laura Barbosa — Triage & Dispatch Times (Last 7 Days)
+
+| Metric | Value |
+|--------|-------|
+| Avg Triage Time | X.X min (N tickets) |
+| Avg Dispatch Time | X.X min (N tickets) |
+
+## Final dashboard shape
+
+# Team Metrics — Week of {date}
+
+## Team-Wide
+
+| Metric | Value |
+|--------|-------|
+| Total Tickets Closed | N |
+| % Closed within 24h | X% |
+| % Closed within 48h | X% |
+| % Closed in < 5 Appointments | X% |
+| % First Contact Resolution | X% |
+
+## Riely Borek
+
+| Metric | Value |
+|--------|-------|
+| % FCR | X% |
+| Tickets Closed | N |
+| Onsites | N |
+
+## Emilio
+
+| Metric | Value |
+|--------|-------|
+| % FCR | X% |
+| Tickets Closed | N |
+| Onsites | N |
+
+## Kevin Casper
+
+| Metric | Value |
+|--------|-------|
+| % FCR | X% |
+| Tickets Closed | N |
+| Billable Hours | X.X hrs |
+
+## Laura Barbosa
+
+| Metric | Value |
+|--------|-------|
+| Avg Triage Time | X.X min |
+| Avg Dispatch Time | X.X min |
+
+## Version
+
+- Version: 1.0.0
+- Created: 2026-06-18
+- Source: converted from Open WebUI prompt and sanitized agent-zero notes
+
+## Changelog
+
+- 1.0.0: Converted Open WebUI Grafana prompt to OpenWork skill using `itastack_itastack_grafana` read-only MCP operations. Removed bash, `sops-run.sh`, Open WebUI tool aliases, and direct Grafana API execution pattern.
