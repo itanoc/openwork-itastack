@@ -80,3 +80,6 @@ prototype/
 __pycache__/
 *.pyc
 *.zip
+
+# Archived OpenWork local state (personal, never commit)
+archive/openwork/local/
