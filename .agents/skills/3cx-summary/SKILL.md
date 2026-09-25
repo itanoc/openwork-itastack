@@ -1,7 +1,7 @@
 ---
 name: 3cx-summary
 description: |
-  Find the latest transcribed ITA 3CX call for a named person, or the local teammate profile `Name:` default, and produce a Halo-ready internal note.
+  Find the latest transcribed ITA 3CX call for a named person, or the local teammate profile `Name:` default, and produce a first-person Halo ticket update ready to upload.
 
   Triggers when user mentions:
   - "3CX call note"
@@ -22,7 +22,7 @@ Be extremely concise. Sacrifice grammar for concision.
 
 ## Goal
 
-Find the latest transcribed 3CX call for the target person in ITA 3CX. Create a ticket-ready Halo internal note.
+Find the latest transcribed 3CX call for the target person in ITA 3CX. Create a first-person Halo ticket update, written the way the technician would log the call, ready to upload to the ticket.
 
 ## Input
 
@@ -79,13 +79,13 @@ Who should I search for in ITA 3CX?
 
 ## Output Requirements
 
-Output must be ready to copy and paste into Halo as an internal note. Use plain MSP ticket language. No chat or meta language.
+Output must be ready to copy and paste straight into the Halo ticket. Write it in the first person as the technician (`I called...`, `I confirmed...`, `I advised...`); never refer to yourself in the third person (`the tech`, `support`, `client was advised`). Use plain MSP ticket language. No chat or meta language.
 
 Output exactly this shape:
 
 ```text
 3CX call summary:
-<2-4 sentence paragraph. State who spoke with whom if known, what call was about, what was decided, and risk/impact if stated. No bullets unless multiple distinct issues.>
+<2-4 sentence first-person paragraph: I called <who I spoke with, if known>, what the call was about, what I did or decided, and risk/impact if stated. No bullets unless multiple distinct issues.>
 
 Details discussed:
 - <specific technical/process detail from transcript>
@@ -96,6 +96,13 @@ Next steps:
 - <agreed follow-up, owner if known>
 - <next ticket/customer action if known>
 ```
+
+## Voice
+
+- First person, past tense, as the technician's own record of the call: `I called...`, `I confirmed...`, `I walked the user through...`, `I advised...`.
+- `Details discussed:` bullets stay terse and verb-first (`Confirmed...`, `Moved...`, `Advised...`). No repeated `I` at the start of every bullet, and never describe yourself in the third person.
+- Name the other party only when the transcript names them; otherwise say `the user`.
+- Never write as an outsider describing your own work (`Spoke with...` about yourself, `the technician`, `support advised`).
 
 ## Rules for Missing Content
 
@@ -123,7 +130,7 @@ If no matching transcribed call is found, output exactly:
 
 ```text
 3CX call summary:
-No matching transcribed 3CX call found for <target person> in recent call history.
+I could not find a matching transcribed 3CX call for <target person> in recent call history.
 
 Details discussed:
 - No transcript available to review.
@@ -137,5 +144,5 @@ Next steps:
 - Do not include "Request understood," "Person searched," "Tenant used," "Matched person," "Tool used," or diagnostics.
 - Do not mention extension number unless useful to the ticket note.
 - Do not say "latest transcribed call" unless useful to ticket wording.
-- Use natural ticket-note wording: "Spoke with...", "Confirmed...", "Client advised...", "Recommended...", "Next step is...".
+- Use natural first-person ticket wording: "I called the user about...", "I confirmed...", "I advised the user...", "I recommended...", "Next step is...".
 - Keep wording factual, professional, concise. No AI phrasing. No citations.
